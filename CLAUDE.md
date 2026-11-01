@@ -15,8 +15,8 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    buttons 4-8 select one of 5 CONTROLS for that part, the DIAL changes the value (like the rest
    of the PSR-9000; the stock home mixer uses up/down per channel, which annoys him). Other
    volumes (SONG, ACMP, M.PAD, LEFT, MIC, song/style tracks) move to a sub-menu.
-3. Controls (draft): VOLUME (CC7), BRIGHT (CC74), REVERB (CC91, DOWN toggles on/off and restores
-   the previous level), CHORUS (CC93), OCTAVE. Last two are placeholders.
+3. Controls (decided): VOLUME (CC7), BRIGHT (CC74), REVERB (CC91; DOWN toggles on/off and restores
+   the previous level). Slots 7-8 left empty for later. NOT octave/transpose (own panel buttons).
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. More later.

@@ -26,7 +26,7 @@ def dashed_box(b, r=0):
 parts = [dict(p='R1', name='Live! Grand', on=True,  v=[100, 64, 40, 0, 0], rev=True),
          dict(p='R2', name='Live! Strs',  on=True,  v=[82, 80, 64, 20, 0], rev=True),
          dict(p='R3', name='Cool! Organ', on=False, v=[64, 64, 40, 0, -1], rev=False)]
-ctrls = ['VOLUME', 'BRIGHT', 'REVERB', 'CHORUS', 'OCTAVE']
+ctrls = ['VOLUME', 'BRIGHT', 'REVERB', None, None]   # slots 7-8 left free
 
 # ---- status bar ----
 t((8, 9), 'Heart Beat', f_smallb, anchor='lm')
@@ -77,6 +77,9 @@ for i, Q in enumerate(parts):
 # controls (buttons 4-8) for the selected part
 for j, name in enumerate(ctrls):
     x = (j + 3) * 40
+    if name is None:                         # free slot: faint dashed outline only
+        dashed_box((x + 4, top + 18, x + 36, H - 4))
+        continue
     val = P['v'][j]
     if j == sel_ctrl:
         d.rounded_rectangle((x + 3, top + 17, x + 37, H - 3), 7, fill=K); fg = Wt
