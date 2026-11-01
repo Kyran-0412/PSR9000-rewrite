@@ -4,6 +4,34 @@ Reverse-engineering the Yamaha PSR-9000 arranger keyboard (firmware V3.06) to ad
 multi-sample instruments, firmware features, a redesigned UI, and eventually a MAME driver
 for testing without the hardware.
 
+## Goals (what Kyran wants)
+Used live at church. Keep all sounds and styles as they are. Approach: patch the existing
+firmware (hook/replace screens and handlers, new code in free space), not a from-scratch rewrite.
+1. Home page redesign: move often-used controls onto it, remove elements never used.
+2. Volume mixer: keep only the Right1/Right2/Right3 part volumes on the main view; move all other
+   volumes into a sub-menu. Make it work consistently with other screens. Frees up buttons.
+3. Home page: per-part BRIGHTNESS control for the 3 parts, with a way to choose which part
+   (1/2/3) the control edits.
+4. Home page: one-button reverb on/off (apply/remove reverb).
+5. More later.
+
+## Leads for the goals (main_prog.bin offsets)
+- Parts are named RIGHT 1 / RIGHT 2 / RIGHT 3 / LEFT (0x3D0060, 0x3D0FF4).
+- Panel button / assignable-function name list at 0x3AEC60-0x3AF1EC: includes MAIN MIXER,
+  MIXING CONSOLE, DIRECT ACCESS, PART ON/OFF, LCD A-J, LCD 1-8 UP/DOWN, PART SELECT
+  RIGHT1/2/3/LEFT, PART ON/OFF RIGHT1/2/3/LEFT, REGIST 1-8. Find which code indexes this list to
+  get the button-ID numbering (needed to remap buttons).
+- Per-part controller targets at 0x3D0F4C: MODULATION, VOLUME, PAN, EXPRESSION, HARMONIC CNT,
+  RELEASE/ATTACK TIME, BRIGHTNESS, REVERB SEND, CHORUS SEND, applied to RIGHT 1/2/3/LEFT.
+  Likely the foot pedal / controller assign table, so the firmware already has a "set brightness /
+  reverb send for part N" path we can call from a new home-page control.
+- Second parameter list at 0x39398C: VOLUME, PAN, EXPRESSION, BRIGHTNESS, HARMONIC CONTENT,
+  REVERB DEPTH, CHORUS DEPTH, DSP3 DEPTH (probably song/sequencer event names).
+- Numbered list "007: Volume", "074: Brightness", "091: Reverb Send Level" (0x34DC04, 0x34E344,
+  0x34E528) = MIDI control-change names (CC7/74/91). Brightness = CC74, reverb send = CC91, so
+  each goal is "send CC74/CC91 to part N internally".
+- "MAIN MIXER" screen title 0x3AEDD4, "MIXING CONSOLE" 0x3AEC98 / 0x3B6438.
+
 ## Ground rules
 - Yamaha firmware binaries and the service manual are copyrighted: NEVER commit them.
   They live in `firmware/` and `docs/private/`, both in `.gitignore`.
