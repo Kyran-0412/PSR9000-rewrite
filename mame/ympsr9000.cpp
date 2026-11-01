@@ -32,6 +32,12 @@
 #include "screen.h"
 #include "speaker.h"
 
+#include <deque>
+
+#define LOG_LINK (1U << 1)
+#define VERBOSE (LOG_LINK)
+#include "logmacro.h"
+
 namespace {
 
 class psr9000_state : public driver_device
@@ -40,12 +46,14 @@ public:
 	psr9000_state(const machine_config &mconfig, device_type type, const char *tag)
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
+		, m_subcpu(*this, "subcpu")
 		, m_lcdc(*this, "lcdc")
 		, m_fdc(*this, "fdc")
 		, m_dataflash(*this, "data")
 		, m_styleflash(*this, "style")
 		, m_uart(*this, "uart%u", 0U)
 		, m_rom(*this, "maincpu")
+		, m_subrom(*this, "subcpu")
 		, m_styrom(*this, "styrom")
 	{ }
 
@@ -53,16 +61,28 @@ public:
 	void init_psr9000() ATTR_COLD;
 
 private:
-	required_device<sh7043_device> m_maincpu;
+	required_device<sh7043_device> m_maincpu, m_subcpu;
 	required_device<sed1330_device> m_lcdc;
 	required_device<hd63266f_device> m_fdc;
 	required_device<intelfsh16_device> m_dataflash, m_styleflash;
 	required_device_array<ns16550_device, 4> m_uart;
-	required_region_ptr<u32> m_rom;
+	required_region_ptr<u32> m_rom, m_subrom;
 	required_region_ptr<u16> m_styrom;
 	u16 m_pe = 0;
 
-	u32 pa_r() { return 0x00000003; } // TEMP stub of the sub-CPU link: bit0 = 1 can send, bit1 = 1 nothing received
+	// Main <-> sub link ("PIF32" in the gate array): one queue per direction.
+	static constexpr size_t LINK_DEPTH = 64; // real depth unknown
+	std::deque<u32> m_to_sub, m_to_main;
+	u32 m_last_to_main = 0, m_last_to_sub = 0;
+	u32 pa_r();
+	void pa_w(u32 data);
+	virtual void machine_reset() override ATTR_COLD;
+	u32 sub_pa_r();
+	u32 link_main_r();
+	void link_main_w(u32 data);
+	u32 link_sub_r();
+	void link_sub_w(u32 data);
+	void sub_map(address_map &map) ATTR_COLD;
 	u16 pe_r() { return m_pe; }
 	void pe_w(u16 data) { m_pe = data; }
 	u16 style_r(offs_t offset);
@@ -79,6 +99,18 @@ void psr9000_state::init_psr9000()
 	// Fake boot ROM: copy the application vector table (0x20000) to address 0.
 	for(int i = 0; i < 0x400/4; i++)
 		m_rom[i] = m_rom[0x20000/4 + i];
+
+	// EXPERIMENT: the sub program checks for "VPRM" at the start of the (undumped) voice
+	// parameter ROM before setting up its sound engine (sub 0x121F4).
+	{
+		u32 *param = (u32 *)memregion("param")->base();
+		if(param[0] == 0xffffffff)
+			param[0] = 0x5650524d; // "VPRM"
+	}
+
+	// Same for the sub CPU: its application vectors are at 0x8000.
+	for(int i = 0; i < 0x400/4; i++)
+		m_subrom[i] = m_subrom[0x8000/4 + i];
 
 	// The preset style mask ROM is not dumped.  Until it is, fill it with 125 empty
 	// "No Data" styles, using the same 512-byte header layout the firmware itself writes
@@ -111,6 +143,82 @@ void psr9000_state::init_psr9000()
 void psr9000_state::machine_start()
 {
 	save_item(NAME(m_pe));
+	save_item(NAME(m_last_to_main));
+	save_item(NAME(m_last_to_sub));
+}
+
+// Main CPU port A: bit0 = 1 when it may send to the sub CPU (0x253884),
+// bit1 = 0 when a word from the sub CPU is waiting (0x2538B2).
+u32 psr9000_state::pa_r()
+{
+	u32 r = 0;
+	if(m_to_sub.size() < LINK_DEPTH)
+		r |= 1;
+	if(m_to_main.empty())
+		r |= 2;
+	return r;
+}
+
+// Main CPU port A output: bit5 = sub CPU reset, active low (0x127614: 1 = hold, 0 = release).
+void psr9000_state::pa_w(u32 data)
+{
+	bool run = BIT(data, 5);
+	m_subcpu->set_input_line(INPUT_LINE_RESET, run ? CLEAR_LINE : ASSERT_LINE);
+	if(!run) {
+		m_to_sub.clear();
+		m_to_main.clear();
+		m_subcpu->set_input_line(0, CLEAR_LINE);
+	}
+}
+
+void psr9000_state::machine_reset()
+{
+	// Port A outputs are low after reset, so the sub CPU starts held in reset.
+	m_subcpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
+	m_to_sub.clear();
+	m_to_main.clear();
+}
+
+// Sub CPU port A: bit0 = 1 when it may send to the main CPU (sub 0xA43D0).
+u32 psr9000_state::sub_pa_r()
+{
+	return m_to_main.size() < LINK_DEPTH ? 1 : 0;
+}
+
+u32 psr9000_state::link_main_r()
+{
+	if(!m_to_main.empty()) {
+		m_last_to_main = m_to_main.front();
+		m_to_main.pop_front();
+	}
+	return m_last_to_main;
+}
+
+void psr9000_state::link_main_w(u32 data)
+{
+	LOGMASKED(LOG_LINK, "main->sub %08x\n", data);
+	if(m_to_sub.size() < LINK_DEPTH)
+		m_to_sub.push_back(data);
+	// The sub CPU learns about incoming words through IRQ0 (it checks ISR bit 7, sub 0xA434E).
+	m_subcpu->set_input_line(0, ASSERT_LINE);
+}
+
+u32 psr9000_state::link_sub_r()
+{
+	if(!m_to_sub.empty()) {
+		m_last_to_sub = m_to_sub.front();
+		m_to_sub.pop_front();
+	}
+	if(m_to_sub.empty())
+		m_subcpu->set_input_line(0, CLEAR_LINE);
+	return m_last_to_sub;
+}
+
+void psr9000_state::link_sub_w(u32 data)
+{
+	LOGMASKED(LOG_LINK, "sub->main %08x\n", data);
+	if(m_to_main.size() < LINK_DEPTH)
+		m_to_main.push_back(data);
 }
 
 // 0x600000-0x7fffff is banked by port E bit 12 (set at 0x1277C6): 1 = preset style mask ROM
@@ -154,10 +262,24 @@ void psr9000_state::map(address_map &map)
 			NAME(([this, ch](offs_t offset, u8 data) { m_uart[ch]->ins8250_w(offset, data); }))).umask32(0x000000ff);
 	// 0xa00000: 32-bit data port to/from the sub CPU ("PIF32"), send 0x2538E0, receive 0x253948.
 	// Status on port A: bit0 = may send (wait for 1), bit1 = 0 when a word is waiting (0x253884/0x2538B2).
-	map(0x00a00000, 0x00a00003).lrw32(NAME([this](offs_t, u32) { return 0; }), NAME([this](offs_t, u32 data, u32) { logerror("to sub: %08x\n", data); }));
+	map(0x00a00000, 0x00a00003).rw(FUNC(psr9000_state::link_main_r), FUNC(psr9000_state::link_main_w));
 	// 0xe80000-3: bit-banged serial lines (clock/data), written at 0x1258D8-0x125988. Unknown target.
 	// 0xe00000/1: MSM82C51A USART (TO HOST), reset sequence 00 00 00 40 5D 14 at 0x246370. Not hooked up yet.
 	// DRAM area
+	map(0x01000000, 0x01ffffff).ram();
+}
+
+// Sub CPU (TG board), laid out like a Yamaha MU128.
+void psr9000_state::sub_map(address_map &map)
+{
+	map(0x00000000, 0x000fffff).rom().region("subcpu", 0);
+	// 0x400000-0x5fffff: voice parameter mask ROM IC33 (16Mbit, not dumped). Tables at 0x58xxxx-0x5Axxxx.
+	map(0x00400000, 0x005fffff).rom().region("param", 0);
+	// 0x800000/0x802000: SWP30 master/slave. MAME's SWP30 needs a dump of the chip's internal
+	// sine table (sin-table.bin) and the wave ROMs, neither available yet: plain RAM stand-in.
+	map(0x00800000, 0x00803fff).ram();
+	// 0x900000-0x900054, 0x902000-0x90200e: unknown (VOP3 effect DSP?)
+	map(0x00c00000, 0x00c00003).rw(FUNC(psr9000_state::link_sub_r), FUNC(psr9000_state::link_sub_w));
 	map(0x01000000, 0x01ffffff).ram();
 }
 
@@ -180,8 +302,15 @@ void psr9000_state::psr9000(machine_config &config)
 	SH7043(config, m_maincpu, 7_MHz_XTAL * 4); // clock not verified
 	m_maincpu->set_addrmap(AS_PROGRAM, &psr9000_state::map);
 	m_maincpu->read_porta().set(FUNC(psr9000_state::pa_r));
+	m_maincpu->write_porta().set(FUNC(psr9000_state::pa_w));
 	m_maincpu->read_porte().set(FUNC(psr9000_state::pe_r));
 	m_maincpu->write_porte().set(FUNC(psr9000_state::pe_w));
+
+	SH7043(config, m_subcpu, 7_MHz_XTAL * 4); // clock not verified
+	m_subcpu->set_addrmap(AS_PROGRAM, &psr9000_state::sub_map);
+	m_subcpu->read_porta().set(FUNC(psr9000_state::sub_pa_r));
+
+	config.set_perfect_quantum(m_maincpu);
 
 	auto &palette = PALETTE(config, "palette", FUNC(psr9000_state::palette_init), 2);
 
@@ -222,6 +351,14 @@ ROM_START( psr9000 )
 
 	// Style flash IC28: factory contents not dumped.
 	ROM_REGION16_BE( 0x200000, "style", ROMREGION_ERASEFF )
+
+	ROM_REGION32_BE( 0x100000, "subcpu", ROMREGION_ERASEFF )
+	ROM_LOAD( "p9000s.bin", 0x000000, 0x100000, CRC(e742bf8f) SHA1(c4b66b059f610a7d7a4885304f1fbd5cc8415a18) )
+
+	// Voice parameter mask ROM IC33 (16Mbit): not dumped.
+	ROM_REGION32_BE( 0x200000, "param", ROMREGION_ERASEFF )
+
+	// Wave mask ROMs IC41/IC42/IC44/IC45 (4x MX23C6410, 32MB): not dumped.
 
 	// Preset style mask ROM IC29 (MX23C1610, 2MB): not in the update files, not dumped yet.
 	ROM_REGION16_BE( 0x200000, "styrom", ROMREGION_ERASEFF )

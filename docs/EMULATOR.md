@@ -77,7 +77,22 @@ flash. The firmware may complain about missing styles; we fake what is needed.
    saves them (MAME nvram folder); the next boot skips that and stays on the splash screen
    Preset style ROM is not dumped: the driver fills it with 125 empty "No Data" styles so
    style loading works. The boot now stops waiting for the SUB CPU to answer over 0xA00000.
-3. NEXT: emulate the sub CPU (second SH7043 running p9000s.bin, TG board: like an MU128 with
+3. IN PROGRESS: sub CPU emulated (second SH7043 running p9000s.bin). Findings:
+   - main port A bit5 = sub CPU reset, active low (0x127614); sub held in reset at power-on.
+   - link = two 32-bit queues: main 0xA00000 <-> sub 0xC00000. Sub gets IRQ0 per incoming
+     word (checks ISR bit 7); both sides see "may send" on their port A bit0, main sees
+     "word waiting" as port A bit1 low.
+   - boot traffic: main AA55AA55, 81000001 -> sub 81000300; then main polls 82000100 and the
+     sub answers 83000000 ("not ready") forever.
+   - sub sound engine setup checks "VPRM" at the start of the voice parameter ROM (IC33,
+     not dumped) and otherwise crashes on its first tick. The driver now plants that 4-byte
+     header (experiment): the sub then initialises its 0x900000 chip but still never
+     reports ready, probably because the parameter data itself is missing.
+   Mask ROMs needed for a faithful emulation (none are in any update file or restore disk):
+   IC29 preset styles (2MB), IC33 voice parameters (2MB), wave ROMs (4x 8MB), SWP30 internal
+   sine table. Getting them needs a chip dump, or a small dump routine in patched firmware.
+   Meanwhile, faking the sub's "ready" answer may be enough to reach the home screen.
+   (Old plan text: emulate the sub CPU (second SH7043 running p9000s.bin, TG board: like an MU128 with
    2x SWP30) and the 0xA00000 link, so the boot handshake completes.
 4. Panel buttons and the dial (input), so menus can be navigated.
 5. Sound (SWP30 is emulated in MAME, but the wave and voice-parameter ROMs are not dumped).
