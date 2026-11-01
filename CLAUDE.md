@@ -11,14 +11,16 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    with the on-screen R1/R2/R3 buttons, so the home screen becomes display-only for parts:
    show the ACTIVE layers (R1/R2/R3 voice + on/off) in the centre. LEFT/SONG/STYLE can shrink
    to a status line. Frees the 10 side buttons (A-E left, F-J right) for new functions.
-2. Mixer strip (bottom, 8 channels over LCD buttons 1-8): UP button = select channel, DIAL =
-   change value (like the rest of the PSR-9000; the stock home mixer uses up/down per channel,
-   which annoys him). Keep only R1/R2/R3 volume; other volumes (SONG, ACMP, M.PAD, LEFT, MIC,
-   song/style tracks) go into a sub-menu.
-3. Per-part BRIGHTNESS (CC74) for R1/R2/R3 on the home screen.
-4. One-press reverb on/off (CC91 send; restore previous level on "on").
+2. Bottom row (LCD buttons 1-8, UP/DOWN pairs): buttons 1-3 SELECT THE PART (R1/R2/R3),
+   buttons 4-8 select one of 5 CONTROLS for that part, the DIAL changes the value (like the rest
+   of the PSR-9000; the stock home mixer uses up/down per channel, which annoys him). Other
+   volumes (SONG, ACMP, M.PAD, LEFT, MIC, song/style tracks) move to a sub-menu.
+3. Controls (draft): VOLUME (CC7), BRIGHT (CC74), REVERB (CC91, DOWN toggles on/off and restores
+   the previous level), CHORUS (CC93), OCTAVE. Last two are placeholders.
+4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
+   font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. More later.
-Draft layout: mockups/home_v1.py (8 channels: VOL R1-3, BRT R1-3, REV, spare).
+Current layout: mockups/home_v3.py (v1/v2 are earlier drafts).
 
 ## Leads for the goals (main_prog.bin offsets)
 - Parts are named RIGHT 1 / RIGHT 2 / RIGHT 3 / LEFT (0x3D0060, 0x3D0FF4).
