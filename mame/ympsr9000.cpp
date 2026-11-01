@@ -71,7 +71,7 @@ private:
 	u16 m_pe = 0;
 
 	// Main <-> sub link ("PIF32" in the gate array): one queue per direction.
-	static constexpr size_t LINK_DEPTH = 64; // real depth unknown
+	static constexpr size_t LINK_DEPTH = 65536; // real depth unknown; deep to avoid deadlock while main polls
 	std::deque<u32> m_to_sub, m_to_main;
 	u32 m_last_to_main = 0, m_last_to_sub = 0;
 	u32 pa_r();
@@ -199,7 +199,9 @@ void psr9000_state::link_main_w(u32 data)
 	LOGMASKED(LOG_LINK, "main->sub %08x\n", data);
 	if(m_to_sub.size() < LINK_DEPTH)
 		m_to_sub.push_back(data);
-	// The sub CPU learns about incoming words through IRQ0 (it checks ISR bit 7, sub 0xA434E).
+	// The sub CPU learns about incoming words through IRQ0, edge triggered (sub ICR = 0x0020),
+	// and polls the ISR bit 7 flag for follow-up words (sub 0xA434E): one pulse per word.
+	m_subcpu->set_input_line(0, CLEAR_LINE);
 	m_subcpu->set_input_line(0, ASSERT_LINE);
 }
 
@@ -217,8 +219,16 @@ u32 psr9000_state::link_sub_r()
 void psr9000_state::link_sub_w(u32 data)
 {
 	LOGMASKED(LOG_LINK, "sub->main %08x\n", data);
+	// STOPGAP: the main CPU asks "ready?" with 82 00 01 00; the sub answers 83 00 00 xx where
+	// xx = 1 once its sound engine is up (sub RAM 0x10D9D39, handler sub 0xA4524). Without the
+	// voice parameter ROM it never gets there, so report ready on its behalf.
+	if(data == 0x83000000)
+		data = 0x83000001;
 	if(m_to_main.size() < LINK_DEPTH)
 		m_to_main.push_back(data);
+	// The main CPU has an IRQ3 handler for incoming words (0x1256C8 -> 0x253E00). Raising it
+	// changes the boot sequence (it then waits for a sub "ready" notice that never comes
+	// without the voice parameter ROM), so it is left off for now and the main CPU polls.
 }
 
 // 0x600000-0x7fffff is banked by port E bit 12 (set at 0x1277C6): 1 = preset style mask ROM

@@ -1,0 +1,48 @@
+diff --git a/src/devices/cpu/sh/sh_intc.cpp b/src/devices/cpu/sh/sh_intc.cpp
+index 989cc8d6..304b932e 100644
+--- a/src/devices/cpu/sh/sh_intc.cpp
++++ b/src/devices/cpu/sh/sh_intc.cpp
+@@ -62,7 +62,7 @@ void sh_intc_device::device_reset()
+ void sh_intc_device::interrupt_taken(int irqline, int vector)
+ {
+ 	// Don't clear an external interrupt which is level and still active
+-	if(vector < 64 || vector >= 72 || BIT(m_icr, 7-(vector & 7)) || !BIT(m_lines, vector & 7))
++	if(vector < 64 || vector >= 72 || !BIT(m_icr, 7-(vector & 7)) || !BIT(m_lines, vector & 7))
+ 		m_pending[vector >> 5] &= ~(1 << (vector & 31));
+ 
+ 	update_irq();
+@@ -102,6 +102,13 @@ void sh_intc_device::set_input(int inputnum, int state)
+ {
+ 	if(BIT(m_lines, inputnum) == state)
+ 		return;
++	if(state)
++		m_lines |= 1 << inputnum;
++	else
++		m_lines &= ~(1 << inputnum);
++	// ISR flag: edge mode latches on the active edge (cleared by writing 0)
++	if(state && !BIT(m_icr, 7-inputnum))
++		m_isr |= 0x80 >> inputnum;
+ 	if(BIT(m_icr, 7-inputnum)) {
+ 		// Level interrupt
+ 		if(state)
+@@ -129,12 +136,18 @@ void sh_intc_device::icr_w(offs_t, u16 data, u16 mem_mask)
+ 
+ u16 sh_intc_device::isr_r()
+ {
+-	return m_isr;
++	// IRQ0-7 flags in bits 7-0: level-sensed inputs show the pin state, edge inputs the latch
++	u16 level = 0;
++	for(int i = 0; i != 8; i++)
++		if(BIT(m_icr, 7-i) && BIT(m_lines, i))
++			level |= 0x80 >> i;
++	return (m_isr & ~(m_icr & 0xff)) | level;
+ }
+ 
+ void sh_intc_device::isr_w(offs_t, u16 data, u16 mem_mask)
+ {
+-	COMBINE_DATA(&m_isr);
++	// flags can only be cleared by software
++	m_isr &= data | ~mem_mask;
+ 	logerror("isr_w %04x @ %04x\n", data, mem_mask);
+ }
+ 

@@ -92,6 +92,20 @@ flash. The firmware may complain about missing styles; we fake what is needed.
    IC29 preset styles (2MB), IC33 voice parameters (2MB), wave ROMs (4x 8MB), SWP30 internal
    sine table. Getting them needs a chip dump, or a small dump routine in patched firmware.
    Meanwhile, faking the sub's "ready" answer may be enough to reach the home screen.
+   Progress with the stopgaps (fake "ready" 83000001, VPRM header, deep link queues):
+   - MAME core fix needed: sh_intc did not implement the ISR flags and mis-cleared edge
+     interrupts. Patch: mame/patches/sh_intc_isr.diff (apply to the MAME tree before building).
+   - The sub now answers the version query (cmd 85 -> "PSR9000 SUB ROM Ver.3.06 ... Mar 03
+     2004") and the main then reads/writes hundreds of tone-generator parameters (cmds 87/89,
+     replies 8A). About 1600 messages are exchanged.
+   - Current blocker: after ~2 emulated minutes the sub idles with its interrupt mask stuck at
+     13, so it stops taking the link interrupt and never answers cmd 84; main waits forever.
+     Suspect SR save/restore around task switches (MAME SH-2 accuracy) or missing ROM data.
+   - Interrupt map (main): IRQ0 = FDC (0x125580), IRQ2 = quad UART (0x1255FA), IRQ3 = link
+     receive (0x1256C8, not raised yet: raising it changes the boot path, see driver comment).
+     Sub: IRQ0 = link receive, edge triggered.
+   - Command dispatch (sub): table at 0xA401C, descriptor per command {?, collect args,
+     execute, ...}. Message word = 0x80|cmd, argc, sub-op, value.
    (Old plan text: emulate the sub CPU (second SH7043 running p9000s.bin, TG board: like an MU128 with
    2x SWP30) and the 0xA00000 link, so the boot handshake completes.
 4. Panel buttons and the dial (input), so menus can be navigated.

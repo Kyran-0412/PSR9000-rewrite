@@ -119,11 +119,10 @@ DATA DIAL (found):
   - `9000update.pdf` install instructions
 - Service manual PDF (block diagram, parts list, test mode).
 - Installed on Kyran's keyboard: main 3.06, sub 3.01 (per test mode).
-- Kyran also has 2 floppies labelled "Factory Setup Restore Disks" (at church). Likely the
-  factory contents of the data/style flash (styles, OTS, MDB, maybe custom voices), which the
-  update files do not contain. Wanted for the emulator (style flash IC28 is empty there) and
-  to learn the data formats. To do: copy files / make 1.44MB images (USB floppy drive), keep
-  them private in firmware/ like the other Yamaha files.
+- Kyran also has 2 floppies "Factory Setup Restore Disks": he checked, they hold factory
+  SETTINGS (setup/registration-type data), not styles or voices. Useful later for realistic
+  emulator flash contents; they cannot replace the mask ROMs (IC29 styles, IC33 voice
+  parameters, wave ROMs). Keep private in firmware/ if copied.
 
 ## Hardware (from service manual)
 - DM board: main CPU SH7043 (HD6437043, IC1). Program flash IC6/IC7 = 2x 28F160S5 (4MB total).
