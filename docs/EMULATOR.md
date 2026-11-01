@@ -24,6 +24,24 @@ Yamaha's V3.06 update (and `p9000s.bin` for the sub CPU later).
 Run without a display: `mame/run_headless.sh [seconds] [snapshot-interval]` writes LCD
 snapshots plus MAME's `error.log` (unmapped accesses) to `firmware/emu_out/`.
 
+## Windows 11
+
+Plan A: a prebuilt `psr9000.exe` cross-compiled from Linux (to be tried once the driver boots).
+Then: put the exe in a folder, create `roms\psr9000\` next to it, copy `p9000m.001`-`.004`
+into it, and run `psr9000.exe psr9000 -window`.
+
+Plan B, WSL (Ubuntu inside Windows 11, has graphics and sound):
+1. PowerShell as administrator: `wsl --install -d Ubuntu`, reboot, create a user.
+2. In the Ubuntu window:
+   `sudo apt update && sudo apt install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig1-dev libpulse-dev libasound2-dev`
+3. Clone this repo and MAME, then follow "Building" above (takes 1-2 hours the first time).
+4. Copy the update files into `firmware/roms/psr9000/` (Windows drives are under `/mnt/c/`).
+5. Run: `./psr9000 psr9000 -rompath ../PSR9000-rewrite/firmware/roms -window`
+
+Plan C, MSYS2 (MAME's official Windows toolchain): follow
+https://docs.mamedev.org/initialsetup/compilingmame.html#microsoft-windows-msys2 , then the
+same `make SUBTARGET=psr9000 SOURCES=src/mame/yamaha/ympsr9000.cpp ...` line in a MINGW64 shell.
+
 ## Fake boot ROM
 
 The protected boot area (main 0x000000-0x01FFFF) is not in the update files. The driver copies
