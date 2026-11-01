@@ -39,6 +39,35 @@ Current layout: mockups/home_v3.py (v1/v2 are earlier drafts).
   each goal is "send CC74/CC91 to part N internally".
 - "MAIN MIXER" screen title 0x3AEDD4, "MIXING CONSOLE" 0x3AEC98 / 0x3B6438.
 
+## Code map for the home-screen goals (found 2026-11, main_prog.bin)
+Panel button IDs (from the SW/LED test table at 0x3AD240: 12-byte entries = name ptr, u16 switch
+ID, u16 LED, test note): LCD A-J = 0x88-0x91, LCD n UP = 0x92+2(n-1), LCD n DOWN = 0x93+2(n-1)
+(so 1UP=0x92 ... 8DOWN=0xA1), MAIN MIXER 0x83, PART ON/OFF 0x84, PAGE NEXT 0x85, BACK 0x86,
+EXIT 0x87, DIRECT ACCESS 0x05, PART SELECT LEFT/R1/R2/R3 0x4F-0x52, PART ON/OFF L/R1/R2/R3
+0x53-0x56. The DATA DIAL is not in this table (separate encoder path, not found yet).
+
+Main Mixer button handling (page 1, MAIN VOLUME):
+- 0x2606DC: button ID -> channel 0-7. 0x26073C(id, step): UP = +step, DOWN = -step.
+- 0x2607D2(delta, channel, mode): reads current value with a getter, clamps 0..127
+  (0x25FA58(cur, delta, max, min)), then posts the change.
+- Channel -> getter / param ID: SONG 0x51218/44, ACMP 0x5104A/28, M.PAD 0x51298/51,
+  LEFT/R1/R2/R3 = 0x50C18(part)/5, MIC 0x51308/57.
+Part numbers everywhere: 0=R1, 1=R2, 2=R3, 3=LEFT (column->part table 0x3B3D31: 00 00 00 03 00 01 02).
+
+Parameter change API: 0x25CE4(category, id, len, data*) -> 0x2ACDE -> 0x2ABC6 (posts a message;
+another task applies it). Keyboard-part params are category 2, data = [part, value(, 1)]:
+  id 5 VOLUME, 6 PAN, 7 EQ LOW, 8 EQ HIGH (VOL/EQ handler 0x268358),
+  id 9 HARMONIC CONTENT, id 10 BRIGHTNESS (FILT handler 0x26BA8A).
+  Song uses ids 44-47 (+41-43 effects), ACMP 28-31 (+25-27), M.PAD 51-54, MIC 57/58.
+Getters (part -> value): 0x50C18 volume (field 0), 0x50C34 pan (1), 0x50C50/0x50C6C EQ (6/7),
+  0x50CB8 harmonic (80), 0x50CD4 BRIGHTNESS (82). Pattern: 0x4D718(part)->channel, then
+  0x1B4AF2(channel, field). 0x408E8(part, index) = get keyboard-part setting by index:
+  0 vol, 1 pan, 2-3 EQ, 4 harmonic, 5 bright, 6 REVERB SEND (0x50CF0), 7 chorus (0x50D06),
+  8 DSP (0x50D1C), 10-13 signed/other (octave, tuning...).
+REVERB send per keyboard part: read via 0x50CF0 = 0x23CF60(system param 5..8, 0) for
+  R1/R2/R3/LEFT (map 0x4DAD0). Chorus = system params 33..36 (0x4DB12). The WRITE path
+  (which message changes system params 5-8) is NOT found yet: next step, ideally in Ghidra.
+
 ## Ground rules
 - Yamaha firmware binaries and the service manual are copyrighted: NEVER commit them.
   They live in `firmware/` and `docs/private/`, both in `.gitignore`.
