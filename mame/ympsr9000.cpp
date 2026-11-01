@@ -22,6 +22,10 @@
 #include "emu.h"
 
 #include "cpu/sh/sh7042.h"
+#include "imagedev/floppy.h"
+#include "machine/ins8250.h"
+#include "machine/intelfsh.h"
+#include "machine/upd765.h"
 #include "video/sed1330.h"
 
 #include "emupal.h"
@@ -37,6 +41,10 @@ public:
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
 		, m_lcdc(*this, "lcdc")
+		, m_fdc(*this, "fdc")
+		, m_dataflash(*this, "data")
+		, m_styleflash(*this, "style")
+		, m_uart(*this, "uart%u", 0U)
 		, m_rom(*this, "maincpu")
 	{ }
 
@@ -46,6 +54,9 @@ public:
 private:
 	required_device<sh7043_device> m_maincpu;
 	required_device<sed1330_device> m_lcdc;
+	required_device<hd63266f_device> m_fdc;
+	required_device<intelfsh16_device> m_dataflash, m_styleflash;
+	required_device_array<ns16550_device, 4> m_uart;
 	required_region_ptr<u32> m_rom;
 
 	void map(address_map &map) ATTR_COLD;
@@ -70,13 +81,22 @@ void psr9000_state::map(address_map &map)
 {
 	// CS0: program flash
 	map(0x00000000, 0x003fffff).rom().region("maincpu", 0);
-	// CS1: data flash (IC27) 0x400000-0x5fffff, style flash (IC28) 0x600000-0x7fffff
-	map(0x00400000, 0x005fffff).rom().region("data", 0);
-	map(0x00600000, 0x007fffff).rom().region("style", 0);
+	// CS1: data flash IC27 0x400000-0x5fffff, style flash IC28 0x600000-0x7fffff (28F160S5, 16-bit)
+	map(0x00400000, 0x005fffff).rw(m_dataflash, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x00600000, 0x007fffff).rw(m_styleflash, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
 	// CS2/CS3: peripherals, being identified (see docs/EMULATOR.md)
 	// 0xc80000/1: SED1335 LCDC (A0=0 status/data, A0=1 command/data read), found at 0x10C0AA
 	map(0x00c80000, 0x00c80000).rw(m_lcdc, FUNC(sed1330_device::status_r), FUNC(sed1330_device::data_w));
 	map(0x00c80001, 0x00c80001).rw(m_lcdc, FUNC(sed1330_device::data_r), FUNC(sed1330_device::command_w));
+	// 0xc00000-2: HD63266F FDC (msr / fifo / extstat). Status poll loop at 0x317786.
+	map(0x00c00000, 0x00c00002).m(m_fdc, FUNC(hd63266f_device::map));
+	// 0x980000-0x98007f: quad 16550-style UART, channel n at +0x20*n, register r at +4*r+3.
+	// Init at 0x125BFE (DLAB, divisor 20 = 31250 baud with a 10 MHz clock -> MIDI).
+	for(int ch = 0; ch < 4; ch++)
+		map(0x00980000 + 0x20*ch, 0x0098001f + 0x20*ch).lrw8(
+			NAME(([this, ch](offs_t offset) { return m_uart[ch]->ins8250_r(offset); })),
+			NAME(([this, ch](offs_t offset, u8 data) { m_uart[ch]->ins8250_w(offset, data); }))).umask32(0x000000ff);
+	// 0xe80000-3: bit-banged serial lines (clock/data), written at 0x1258D8-0x125988. Unknown target.
 	// 0xe00000/1: MSM82C51A USART (TO HOST), reset sequence 00 00 00 40 5D 14 at 0x246370. Not hooked up yet.
 	// DRAM area
 	map(0x01000000, 0x01ffffff).ram();
@@ -86,6 +106,11 @@ void psr9000_state::lcdc_map(address_map &map)
 {
 	map.global_mask(0x7fff);
 	map(0x0000, 0x7fff).ram();
+}
+
+static void psr9000_floppies(device_slot_interface &device)
+{
+	device.option_add("35hd", FLOPPY_35_HD);
 }
 
 static INPUT_PORTS_START( psr9000 )
@@ -109,6 +134,16 @@ void psr9000_state::psr9000(machine_config &config)
 	m_lcdc->set_screen("screen");
 	m_lcdc->set_addrmap(0, &psr9000_state::lcdc_map);
 
+	// 28F160S5: closest MAME model is the TE28F160 (same size/commands, reports a Sharp maker id)
+	INTEL_TE28F160(config, m_dataflash);
+	INTEL_TE28F160(config, m_styleflash);
+
+	for(int ch = 0; ch < 4; ch++)
+		NS16550(config, m_uart[ch], 10_MHz_XTAL); // clock deduced from the MIDI divisor
+
+	HD63266F(config, m_fdc, 16_MHz_XTAL); // clock not verified
+	FLOPPY_CONNECTOR(config, "fdc:0", psr9000_floppies, "35hd", floppy_image_device::default_pc_floppy_formats);
+
 	SPEAKER(config, "speaker", 2).front();
 }
 
@@ -119,11 +154,12 @@ ROM_START( psr9000 )
 	ROM_LOAD( "p9000m.004", 0x2c0000, 0x140000, CRC(d410dfae) SHA1(b9a507ec8e386a6a00fb8f7285b3bd8e7623f235) )
 
 	// Data flash IC27: only the part written by the update (loads at 0x4f0000) is known.
-	ROM_REGION32_BE( 0x200000, "data", ROMREGION_ERASEFF )
+	// (initial contents of the emulated flash; later writes are saved to MAME's nvram folder)
+	ROM_REGION16_BE( 0x200000, "data", ROMREGION_ERASEFF )
 	ROM_LOAD( "p9000m.001", 0x0f0000, 0x110000, CRC(d9784659) SHA1(2c64885ee56e00bce777e34533ee98c594681227) )
 
 	// Style flash IC28: factory contents not dumped.
-	ROM_REGION32_BE( 0x200000, "style", ROMREGION_ERASEFF )
+	ROM_REGION16_BE( 0x200000, "style", ROMREGION_ERASEFF )
 ROM_END
 
 } // anonymous namespace

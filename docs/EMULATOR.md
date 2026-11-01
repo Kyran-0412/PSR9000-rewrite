@@ -54,19 +54,27 @@ emulated or faked as we find it.
 | Address | What | Evidence |
 |---|---|---|
 | 0x000000-0x3FFFFF | Program flash (CS0), main program | update files load here |
-| 0x400000-0x5FFFFF | Data flash IC27 | `p9000m.001` loads at 0x4F0000 |
-| 0x600000-0x7FFFFF | Style flash IC28 | Rom Chk1 checks 0x600000-0x7FFFFF |
+| 0x400000-0x5FFFFF | Data flash IC27, 28F160S5 x16 (emulated, writable) | `p9000m.001` loads at 0x4F0000; firmware writes OTS/MDB/regist here |
+| 0x600000-0x7FFFFF | Style flash IC28, 28F160S5 x16 (emulated, writable) | "Initializing STYLE" writes here |
+| 0x980000-0x98007F | Quad 16550 UART, ch n at +0x20n, reg r at +4r+3 | init at 0x125BFE: DLAB, divisor 20 (=31250 baud MIDI @10 MHz) |
+| 0xA00000 | 32-bit writes (unknown: watchdog/LED/latch?) | |
+| 0xA80000-0xA8004F | byte reads at +0x2C, +0x44 in interrupt handlers (gate array status?) | ISR at 0x20D38 |
+| 0xC00000-0xC00002 | HD63266F FDC (msr / fifo / extstat) | poll loop 0x317786, commands via 0x31779A |
 | 0xC80000 / 0xC80001 | SED1335 LCDC data / command | code at 0x10C0AA: cmd 0x46, addr, cmd 0x42 |
+| 0xD00000-0xD00003 | unknown; read as 6-bit value (`& 0x3F`, debounced) at 0x8BDE0, also polled in ISR | input port? |
 | 0xE00000 / 0xE00001 | MSM82C51A USART data / control (TO HOST) | reset sequence `00 00 00 40 5D 14` at 0x246370 |
+| 0xE80000-0xE80003 | bit-banged serial lines (clock/data) | 0x1258D8-0x125988 |
 | 0x1000000-0x1FFFFFF | DRAM | all RAM variables (0x108F358, 0x11A6xxx...) |
-| 0xA00000, 0x800000, 0xC00000-2, 0xD00000, 0xE80003 | unknown peripherals | referenced by code; sub-CPU link, FDC, SCSI, panel? |
 
 Not dumped (not in the update): factory content of the style flash and the rest of the data
 flash. The firmware may complain about missing styles; we fake what is needed.
 
 ## Milestones
 
-1. Firmware runs without crashing; unmapped accesses logged. 
-2. Boot screen on the emulated LCD.
+1. DONE: firmware runs; unmapped accesses logged.
+2. DONE: boot screen ("Welcome to PSR-9000 Ver.3") on the emulated LCD. On a fresh flash the
+   firmware initialises STYLE, CUSTOM VOICE, ORGAN FLUTES, OTS, MULTI PAD, REGISTRATION and
+   saves them (MAME nvram folder); the next boot skips that and stays on the splash screen
+   (waiting on 0xD00000 / sub CPU / panel, under investigation).
 3. Panel buttons and the dial (input), so menus can be navigated.
 4. Sub CPU and main-sub link; later SWP30 sound (MAME already emulates the SWP30).
