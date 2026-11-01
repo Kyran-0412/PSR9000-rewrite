@@ -64,9 +64,32 @@ Getters (part -> value): 0x50C18 volume (field 0), 0x50C34 pan (1), 0x50C50/0x50
   0x1B4AF2(channel, field). 0x408E8(part, index) = get keyboard-part setting by index:
   0 vol, 1 pan, 2-3 EQ, 4 harmonic, 5 bright, 6 REVERB SEND (0x50CF0), 7 chorus (0x50D06),
   8 DSP (0x50D1C), 10-13 signed/other (octave, tuning...).
-REVERB send per keyboard part: read via 0x50CF0 = 0x23CF60(system param 5..8, 0) for
-  R1/R2/R3/LEFT (map 0x4DAD0). Chorus = system params 33..36 (0x4DB12). The WRITE path
-  (which message changes system params 5-8) is NOT found yet: next step, ideally in Ghidra.
+REVERB send per keyboard part = FIELD 3 of the same channel record as volume/brightness
+  (chorus = field 4). Records: base 0x39E434 + 0x1F8 R1 (0x39E62C), +0x24C R2 (0x39E680),
+  +0x2F4 R3 (0x39E728), +0x2A0 LEFT (0x39E6D4); 0x4D718(part) returns these.
+  Read: 0x24369A..0x2436CA (= 0x1B4AF2(record, 3)), reached as system params 5-8 through
+  0x23CF60 (getter tables 0x3AC128 sub0 = field 3, 0x3AC150 sub1 = field 4).
+  Field read/write is virtual: record+4 = method table (0x1CA552 = slot +4 get, +28 get default,
+  +8/+12/+16.. not identified). Field lists per record at 0x32CA2C (kbd parts: 0,1,6,7,80,82)
+  and 0x32CA88 (others: 0,1,6,7,80,82,3,4,5).
+  STILL OPEN: the posted message that WRITES field 3 for keyboard parts. Kyran says reverb is
+  set on a separate effects page (and DSP types on another page): look there / in Ghidra.
+
+DATA DIAL (found):
+- Dial events from the panel event table at 0x3333F0 call 0x6D30E (one direction) and 0x6D2FE
+  (other direction). Both jump to the function pointer stored in RAM 0x108F358 with
+  (amount, direction 0/1). Mode byte at 0x108F35C.
+- 0x6D0C4(fn) = install a screen's own dial handler (mode 2). 0x6D0D2 = restore the default.
+  Used by every Mixing Console page (0x264026, 0x2651E0, ...).
+- Default handler = 0x6D45C (tempo): 0x6D4F0(delta, cur) clamps 32..280 and posts
+  0x25CE4(18, 0, 2, [tempo hi, lo]). That is why the dial changes tempo on the home screen.
+- Main Mixer page event table 0x3B14A8: 16-byte entries {u16 btn, u16 btn, handler, ...}:
+  UP/DOWN pair -> 0x2606DC (select channel), each button -> 0x26073C (step, repeat 0x64);
+  default handler 0x260670 passes unhandled events (incl. dial) to the focused fader widget
+  (0xDEFA4), otherwise to 0x6833C -> 0x684E4 (leave mixer). So on the Main Mixer the dial goes
+  to the selected fader widget, not through 0x108F358.
+- PLAN for the new home screen: install our own dial handler with 0x6D0C4 while the new screen
+  is shown (dial adjusts the selected control), restore with 0x6D0D2 when leaving.
 
 ## Ground rules
 - Yamaha firmware binaries and the service manual are copyrighted: NEVER commit them.
