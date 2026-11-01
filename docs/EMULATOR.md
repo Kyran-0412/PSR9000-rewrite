@@ -108,5 +108,16 @@ flash. The firmware may complain about missing styles; we fake what is needed.
      execute, ...}. Message word = 0x80|cmd, argc, sub-op, value.
    (Old plan text: emulate the sub CPU (second SH7043 running p9000s.bin, TG board: like an MU128 with
    2x SWP30) and the 0xA00000 link, so the boot handshake completes.
-4. Panel buttons and the dial (input), so menus can be navigated.
+3b. DONE (2026-11): the sub CPU is no longer executed. The driver simulates its link replies
+   (HLE, link_main_w/sub_message): 81 hello -> 81000300, 82 op1 "ready?" -> 83000001,
+   84 -> 84000000 + 84000000 end marker, 85 op n -> 86 00 n 00 + version string words read
+   from p9000s.bin (0xD4A2C/0xD4A64/0xD4C6C/0xD4A6D/0xD4A79), 87/88 parameter writes stored,
+   89 read -> 8A 00 00 value, A4 -> A5010000 FFFFFFFF, BE/BF/C0 block transfer ignored.
+   No unhandled commands during boot; ~1500 messages; emulation runs ~7x real time.
+   Quad UART interrupts wired (0x9800A3 = per-channel interrupt bits, main IRQ2).
+4. NEXT: front panel controller (MN101C027, internal mask ROM, so simulate it too). It talks to
+   the main CPU on UART channel 3 (31250 baud, 8N2). Main sends 5-byte packets at boot:
+   E0 0F 0F 05 08, F0 0F 0F 05 08, then 80..8x 00 00 00 00 (LED/lamp data?). The boot now idles,
+   probably waiting for panel replies. The same link carries buttons and the dial, so this is
+   also the input milestone.
 5. Sound (SWP30 is emulated in MAME, but the wave and voice-parameter ROMs are not dumped).
