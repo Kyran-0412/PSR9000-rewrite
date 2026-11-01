@@ -1,0 +1,12 @@
+# Copyrighted Yamaha material: never commit
+firmware/
+docs/private/
+*.bin
+*.zip
+*.00[1-4]
+
+# Ghidra / MAME working files
+*.gpr
+*.rep/
+*.lock
+*.lock~
