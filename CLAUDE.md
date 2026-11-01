@@ -15,7 +15,7 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    buttons 4-8 select one of 5 CONTROLS for that part, the DIAL changes the value (like the rest
    of the PSR-9000; the stock home mixer uses up/down per channel, which annoys him). Other
    volumes (SONG, ACMP, M.PAD, LEFT, MIC, song/style tracks) move to a sub-menu.
-3. Controls (decided): VOLUME (CC7), BRIGHT (CC74), REVERB (CC91; DOWN toggles on/off and restores
+3. Controls (decided): VOLUME (CC7), BRIGHT (CC74), REVERB (param id 11; DOWN toggles on/off and restores
    the previous level). Slots 7-8 left empty for later. NOT octave/transpose (own panel buttons).
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
@@ -72,8 +72,14 @@ REVERB send per keyboard part = FIELD 3 of the same channel record as volume/bri
   Field read/write is virtual: record+4 = method table (0x1CA552 = slot +4 get, +28 get default,
   +8/+12/+16.. not identified). Field lists per record at 0x32CA2C (kbd parts: 0,1,6,7,80,82)
   and 0x32CA88 (others: 0,1,6,7,80,82,3,4,5).
-  STILL OPEN: the posted message that WRITES field 3 for keyboard parts. Kyran says reverb is
-  set on a separate effects page (and DSP types on another page): look there / in Ghidra.
+  WRITE (found): Mixing Console > EFF DEPTH tab (reached via MIXER button, then the top
+  side buttons A/F page left/right through the tabs). Keyboard-part variant code 0x26EB68..;
+  value-change handler 0x26FEFA(col, ?, newval): row var 0x11A6E38 (1 DSP, 2 CHORUS, 3 REVERB),
+  column -> part table 0x3B4C49 (cols 3-6 = LEFT,R1,R2,R3). Posts 0x25CE4(2, id, 2, [part, value]):
+    id 11 = REVERB send, id 12 = CHORUS send, id 13 = DSP depth (keyboard parts).
+  Other columns: SONG 48/49/50, ACMP 32/33/34, M.PAD 55/56/(DSP n/a), MIC 59/60/61.
+  So all three home-screen controls are category-2 messages with data [part, value]:
+    VOLUME id 5 (get 0x50C18), BRIGHT id 10 (get 0x50CD4), REVERB id 11 (get 0x50CF0).
 
 DATA DIAL (found):
 - Dial events from the panel event table at 0x3333F0 call 0x6D30E (one direction) and 0x6D2FE
