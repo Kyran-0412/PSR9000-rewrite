@@ -104,6 +104,13 @@ DATA DIAL (found):
   verified offline (scripts, Ghidra, MAME).
 - Never suggest flashing a modified image without a recovery plan (see "Bootloaders").
 
+## Bootloaders and recovery (see docs/RECOVERY.md)
+- The PROGRAM INSTALLER (hold START/STOP at power-on) is in the protected boot area: no
+  installer strings exist in p9000m.002-004, and updates never write main 0x0-0x1FFFF or
+  sub 0x0-0x7FFF. So a broken main program should be reinstallable from the original disks.
+- Rules: known-good disks tested first, user data backed up, smallest possible first change,
+  both checksums fixed, never touch flash-writing code, never change main and sub together.
+
 ## Source files (not in repo)
 - `PSR9000_OS306.zip` from Yamaha UK support (firm-psr-9000 page). Contains:
   - `p9000m.001` (0x110000) resource pack: UI bitmaps + 5-language messages
@@ -144,12 +151,13 @@ DATA DIAL (found):
 - 56 Yamaha C source filenames left in strings (e.g. `sys_lib.c`, `rsm_vc.c`, `pnm_*.c`):
   use them to label functions.
 - Each image ends with a tag: `306` + `2004MAR031628xx` + adjustment bytes.
-  VERIFIED on the files: byte sum of the whole image == 0xFF (mod 256) for both main
-  (total 0x1670FF) and sub (0x3AE0FF). 16-bit byte/word sums show no pattern, so this looks
-  8-bit. After patching, fix by adjusting a trailer byte. Still unconfirmed against the
-  keyboard's own check routine (see test-mode table below).
-  Trailer bytes after the tag: main `44 70 72 0F 35 FF B7 FF`, sub `6A 03 41 41 EF FF 23 FF`
-  (meaning unknown; maybe the adjustment bytes plus a stored sum).
+  Two integrity rules, both VERIFIED on the original files:
+  1. Whole-image byte sum == 0xFF (mod 256), main and sub (adjustment bytes at the end,
+     main 0x3FFFFC/0x3FFFFE). Probably checked by installer/boot code (not in our files).
+  2. Test-mode Rom Chk1 (main) = routine 0x24D892(0, 0x3FFFFF): sparse 4-lane byte sum over
+     power-of-two offsets per 512 KB block, boot area assumed FF, compared with
+     0x3FFFF8-0x3FFFFB (`44 70 72 0F`). Exact re-implementation: tools/romcheck.py.
+     Rom Chk1 also checks sub (0x2559CC(10)), style 0x600000-0x7FFFFF (0x24DA30), param ROM.
 - Test-mode menu: name-pointer table at main 0x247FF4 ("Version", "Rom Chk1", ... "WaveRam Chk2",
   strings at 0x3AD930+). It sits in the literal pool of a switch on the test number (mov.l/bra
   pairs around 0x247F00-0x248120). Follow case 1 (Rom Chk1) in Ghidra to find the checksum code.
@@ -181,7 +189,7 @@ DATA DIAL (found):
    Add SH7043 on-chip RAM/peripheral blocks from the Renesas SH7043 hardware manual.
 2. Build memory map (find LCDC via SED1335 command bytes 0x40/0x42/0x44/0x46).
 3. DONE: tools/res_extract.py extracts all UI bitmaps (checksum of .001 still unknown).
-4. Confirm checksum algorithm from the code that runs test 002 / update verification.
+4. DONE (Rom Chk1, tools/romcheck.py). Installer/boot check still unseen (boot area not in files).
 5. MAME driver skeleton: stub vector table at 0 jumping to 0x206E8 (real bootloader not
    in update files). Milestone: boot screen in emulation. Then panel input, sub CPU, SWP30.
 6. Later: .VIC custom voice format, debug output over TO HOST serial / MIDI SysEx,
