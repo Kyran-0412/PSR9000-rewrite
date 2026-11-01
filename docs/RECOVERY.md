@@ -39,10 +39,18 @@ Both verified against the original files with `tools/romcheck.py`:
 A patch tool must recompute both (only the sampled addresses affect the first; keep patches
 away from them where possible) before any image goes near the keyboard.
 
+## Status on Kyran's keyboard (2026-11)
+- Installer confirmed working: Kyran updated the keyboard to main 3.06 / sub 3.01 recently
+  using the PROGRAM INSTALLER from floppy.
+- Original update disks exist (stored at church). 10 blank floppies available, and the
+  official files from Yamaha's site can be written to fresh disks at any time.
+- Modified files will always be exactly the same size as the originals (the 4 MB image is
+  split the same way), so they fit on the same 1.44 MB disks.
+
 ## Rules for the first real-hardware tests
 
-1. Keep a **known-good set of update disks** (original Yamaha files) and a working floppy
-   drive or Gotek. Test that set once before trying any modified image.
+1. Keep a **known-good set of update disks** (original Yamaha files), write-protect tab on.
+   Put modified firmware only on separate, clearly labelled disks (e.g. "MOD TEST 1").
 2. **Back up user data first** (DISK/SCSI > BACKUP/RESTORE > BACKUP), as Yamaha recommends:
    reinstalling can reset custom voices and settings.
 3. First modified image = **smallest possible change** (e.g. one text string edited), both
