@@ -128,7 +128,9 @@ DATA DIAL (found):
 ## Hardware (from service manual)
 - DM board: main CPU SH7043 (HD6437043, IC1). Program flash IC6/IC7 = 2x 28F160S5 (4MB total).
   Work DRAM IC2/IC3. Flash IC27 (data, 16Mbit), flash IC28 (style, 16Mbit), mask IC29 (style).
-  Video gate array, FDC, SCSI (IC31), SIO4 (IC26), optional IDE HDD.
+  Video gate array, FDC, SCSI (IC31), gate array MBCG46183 (IC26), optional IDE HDD.
+  IC27/IC28 = 28F160S5 (data/style flash), IC29 = MX23C1610 2MB PRESET STYLE mask ROM (not in
+  any update file; needs a hardware dump). Emulator status/memory map: docs/EMULATOR.md.
 - TG board: sub CPU SH7043 (IC11). Program flash IC25/IC26 = 2x 28F400B5 (1MB total).
   Voice parameter mask ROM IC33 (16Mbit). 2x SWP30 tone generators (master IC1, slave IC12).
   Wave mask ROMs: IC44/IC45 (WAVE1 lo/hi), IC41/IC42 (WAVE2 lo/hi), 4x MX23C6410 = 32MB.

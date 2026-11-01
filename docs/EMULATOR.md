@@ -55,9 +55,9 @@ emulated or faked as we find it.
 |---|---|---|
 | 0x000000-0x3FFFFF | Program flash (CS0), main program | update files load here |
 | 0x400000-0x5FFFFF | Data flash IC27, 28F160S5 x16 (emulated, writable) | `p9000m.001` loads at 0x4F0000; firmware writes OTS/MDB/regist here |
-| 0x600000-0x7FFFFF | Style flash IC28, 28F160S5 x16 (emulated, writable) | "Initializing STYLE" writes here |
+| 0x600000-0x7FFFFF | BANKED by port E bit 12: 1 = preset style mask ROM IC29 (MX23C1610, NOT dumped), 0 = style flash IC28 (28F160S5, emulated) | bank switch 0x1277C6; preset style n header at 0x600010+n*0x200, flash style headers at 0x600000+(n-125)*0x200 (0x1361CA) |
 | 0x980000-0x98007F | Quad 16550 UART, ch n at +0x20n, reg r at +4r+3 | init at 0x125BFE: DLAB, divisor 20 (=31250 baud MIDI @10 MHz) |
-| 0xA00000 | 32-bit writes (unknown: watchdog/LED/latch?) | |
+| 0xA00000 | 32-bit data port to/from the SUB CPU ("PIF32"). Status on port A: bit0 = may send, bit1 = 0 when a word is waiting | send 0x2538E0, receive 0x253948. Boot sends AA55AA55, 81000001, BE010000, 00000020, BF200000 + 32 words, then waits for a reply |
 | 0xA80000-0xA8004F | byte reads at +0x2C, +0x44 in interrupt handlers (gate array status?) | ISR at 0x20D38 |
 | 0xC00000-0xC00002 | HD63266F FDC (msr / fifo / extstat) | poll loop 0x317786, commands via 0x31779A |
 | 0xC80000 / 0xC80001 | SED1335 LCDC data / command | code at 0x10C0AA: cmd 0x46, addr, cmd 0x42 |
@@ -75,6 +75,9 @@ flash. The firmware may complain about missing styles; we fake what is needed.
 2. DONE: boot screen ("Welcome to PSR-9000 Ver.3") on the emulated LCD. On a fresh flash the
    firmware initialises STYLE, CUSTOM VOICE, ORGAN FLUTES, OTS, MULTI PAD, REGISTRATION and
    saves them (MAME nvram folder); the next boot skips that and stays on the splash screen
-   (waiting on 0xD00000 / sub CPU / panel, under investigation).
-3. Panel buttons and the dial (input), so menus can be navigated.
-4. Sub CPU and main-sub link; later SWP30 sound (MAME already emulates the SWP30).
+   Preset style ROM is not dumped: the driver fills it with 125 empty "No Data" styles so
+   style loading works. The boot now stops waiting for the SUB CPU to answer over 0xA00000.
+3. NEXT: emulate the sub CPU (second SH7043 running p9000s.bin, TG board: like an MU128 with
+   2x SWP30) and the 0xA00000 link, so the boot handshake completes.
+4. Panel buttons and the dial (input), so menus can be navigated.
+5. Sound (SWP30 is emulated in MAME, but the wave and voice-parameter ROMs are not dumped).
