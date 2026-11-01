@@ -7,13 +7,18 @@ for testing without the hardware.
 ## Goals (what Kyran wants)
 Used live at church. Keep all sounds and styles as they are. Approach: patch the existing
 firmware (hook/replace screens and handlers, new code in free space), not a from-scratch rewrite.
-1. Home page redesign: move often-used controls onto it, remove elements never used.
-2. Volume mixer: keep only the Right1/Right2/Right3 part volumes on the main view; move all other
-   volumes into a sub-menu. Make it work consistently with other screens. Frees up buttons.
-3. Home page: per-part BRIGHTNESS control for the 3 parts, with a way to choose which part
-   (1/2/3) the control edits.
-4. Home page: one-button reverb on/off (apply/remove reverb).
+1. Home page redesign. Kyran picks parts/layers with the panel buttons right of centre, never
+   with the on-screen R1/R2/R3 buttons, so the home screen becomes display-only for parts:
+   show the ACTIVE layers (R1/R2/R3 voice + on/off) in the centre. LEFT/SONG/STYLE can shrink
+   to a status line. Frees the 10 side buttons (A-E left, F-J right) for new functions.
+2. Mixer strip (bottom, 8 channels over LCD buttons 1-8): UP button = select channel, DIAL =
+   change value (like the rest of the PSR-9000; the stock home mixer uses up/down per channel,
+   which annoys him). Keep only R1/R2/R3 volume; other volumes (SONG, ACMP, M.PAD, LEFT, MIC,
+   song/style tracks) go into a sub-menu.
+3. Per-part BRIGHTNESS (CC74) for R1/R2/R3 on the home screen.
+4. One-press reverb on/off (CC91 send; restore previous level on "on").
 5. More later.
+Draft layout: mockups/home_v1.py (8 channels: VOL R1-3, BRT R1-3, REV, spare).
 
 ## Leads for the goals (main_prog.bin offsets)
 - Parts are named RIGHT 1 / RIGHT 2 / RIGHT 3 / LEFT (0x3D0060, 0x3D0FF4).
