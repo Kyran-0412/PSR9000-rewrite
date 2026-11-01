@@ -10,3 +10,6 @@ docs/private/
 *.rep/
 *.lock
 *.lock~
+
+# Python
+__pycache__/

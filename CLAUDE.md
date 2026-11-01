@@ -92,10 +92,22 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
   Yellow/Key LEDs), so the test code is probably shared with sibling models.
   Other refs: "Flash Protect:" 0x3ADDCC (used at 0x248BE8), "PROTECT" 0x3ADE8C (0x248EE0, 0x249218),
   "Flash Chk1 OK" 0x3AE410 (0x24C01C).
-- `p9000m.001`: starts with header `00 4F 00 00 00 11 00 00` (0x110000 = file size).
-  Byte-sum rule does NOT hold here; checksum + load address still unknown.
-  Contains 1-bit LCD bitmaps, 320px wide (40 bytes/row), e.g. owner-name entry screen
-  near offset 0x6000 + 1180*40.
+- `p9000m.001` = UI image pack, DECODED (tools/res_extract.py extracts all 1030 images to PNG).
+  Loads at 0x4F0000 (header word 0 = load address, word 1 = size). Each image = pixel data plus a
+  12-byte record: u16 w, u16 h, u32 flags, u32 ptr-to-pixels. Main code points at the RECORDS
+  (909 literal refs). flags 0 = raw 1bpp rows (byte padded); flags 0x01000000 = compressed:
+  u16 len, then 0x00-0x7F = 7 literal px, 0x80+n = n+1 px off, 0xC0+n = n+1 px on; a literal is
+  cut off at row end. Bit 1 = dark pixel. 237 compressed + 793 raw, all decode exactly.
+- UI screens are built from widget objects: 0xDEB18 = widget_set_image (stores record ptr at +32).
+- Home screen: top half = image record 0x5F7B6C (drawn by code at ~0x69640, also loads the
+  octave -1/0/+1 and bottom-bar icons). Song/lyrics variant = 0x5A1F64 (code ~0x1DC6C0).
+- Home bottom half = MAIN MIXER panel, code 0x25FFC0-0x262A40. Panel at (0,154) 320x86, frame
+  record 0x520308, title strip at (0,156). 4 pages: MAIN VOLUME (0x520FB8, built ~0x25FFF4),
+  PART ON/OFF ACMP (RHY1..PHR2), SONG TR1-8, SONG TR9-16. 8 channels, 40px apart, fader widget
+  at (40*i+2, 181), range 0-127. Page-1 labels 0x3B1458 (6-byte stride): SONG ACMP M.PAD LEFT
+  R1 R2 R3 MIC. Fader art = 29 pre-drawn 28x35 frames (0x504F48..); rotary knob = 13 frames.
+- Mixing Console screens: 0x524C30.. (tabs VOL/EQ FILT EFF DEPTH EFF TYPE TUNE N.EQ VOICE
+  LINE OUT; parts MASTER SONG KBD LEFT R1 R2 R3), code near 0x2638C4. BRIGHTNESS lives on FILT.
 - Pointer clusters in main code to external ranges ~0x00C00000, 0x01000000, 0x02000000,
   0x05000000: likely DRAM / LCDC / gate arrays / main-sub link. Not yet identified.
 
@@ -103,7 +115,7 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
 1. Ghidra: import main_prog.bin (SH-2 BE, base 0), entry 0x206E8; sub entry 0x85D4.
    Add SH7043 on-chip RAM/peripheral blocks from the Renesas SH7043 hardware manual.
 2. Build memory map (find LCDC via SED1335 command bytes 0x40/0x42/0x44/0x46).
-3. Tool: extract all UI bitmaps from p9000m.001 to PNG; crack its header/checksum.
+3. DONE: tools/res_extract.py extracts all UI bitmaps (checksum of .001 still unknown).
 4. Confirm checksum algorithm from the code that runs test 002 / update verification.
 5. MAME driver skeleton: stub vector table at 0 jumping to 0x206E8 (real bootloader not
    in update files). Milestone: boot screen in emulation. Then panel input, sub CPU, SWP30.
