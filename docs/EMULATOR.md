@@ -141,7 +141,26 @@ flash. The firmware may complain about missing styles; we fake what is needed.
      and then makes no further OS calls. Main also polls tone-generator params 08000100/0200/
      0300 about 42x per second (answered 0 by the sub HLE), possibly waiting for a value.
      Next: identify the mailbox-9 task and what the 08000x00 values mean.
-4. NEXT: front panel controller (MN101C027, internal mask ROM, so simulate it too). It talks to
+     RESOLVED: the real cause was the LCD copy (see 3d).
+3d. DONE (2026-11): HOME SCREEN reached (~4 emulated seconds; MAIN VOLUME mixer, parts,
+   style, BPM/TRP/OCT bar all drawn). How the LCD is fed:
+   - 0x10BBCA writes CSRW (0x46, address 0) + MWRITE (0x42) to the SED1330, then copies the
+     RAM framebuffer to the LCD data port 0xC80000 with DMAC channel 2 (CHCR 0x1404/0x1405:
+     auto-request, source increment, byte, interrupt on end), 20 bytes per chunk.
+   - Each chunk is started by an MTU0 TGRC input capture (TIOR0L = 9, falling edge on
+     TIOC0C, ISR vector 90 -> 0x10BCD4 sets DE); DMA end (DEI2, vector 80 -> 0x10BCF0) queues
+     the next chunk and re-enables TGI0C. The TIOC0C signal source is unknown (probably a line
+     pulse from the display side); the driver pulses it every 64 us (guess).
+   - The firmware enables the DMAC with a LONGWORD write of 1 to the 16-bit DMAOR (0x31F01C,
+     in the SCSI init); real hardware evidently takes the low word.
+   - MAME core changes (mame/patches/sh_dmac_mtu.diff): DMAC was a register stub; now does
+     auto-request transfers (timed, ~4 CPU cycles per unit), sets TE, raises DEI. MTU channels
+     get input_capture(); sh7042 gets mtu_input_capture(ch, tgr) and a 32-bit DMAOR handler.
+     Noisy register logging silenced (a 12 s run once wrote a 30 GB error.log; run.sh now
+     caps files at 2 GB with ulimit -f).
+   - Shown values come from fake data (no sub CPU / ROMs): all parts "GrandPno", style
+     "Heart Beat", tempo 280.
+4. NEXT (now the blocker for interaction): front panel controller (MN101C027, internal mask ROM, so simulate it too). It talks to
    the main CPU on UART channel 3 (31250 baud, 8N2). Main sends 5-byte packets at boot:
    E0 0F 0F 05 08, F0 0F 0F 05 08, then 80..8x 00 00 00 00 (LED/lamp data?). The boot now idles,
    (not needed for boot as far as seen). Protocol from the main CPU's parser (0x8A7FE/0x8A748):

@@ -117,7 +117,7 @@ index dbe2b32f..e2395195 100644
  	u16 do_read_port16(int port) { return m_read_port16[port](); }
  	void do_write_port16(int port, u16 data, u16 ddr) { m_write_port16[port](0, data, ddr); }
 diff --git a/src/devices/cpu/sh/sh_dmac.cpp b/src/devices/cpu/sh/sh_dmac.cpp
-index 39775445..bb078d50 100644
+index 39775445..b77790d6 100644
 --- a/src/devices/cpu/sh/sh_dmac.cpp
 +++ b/src/devices/cpu/sh/sh_dmac.cpp
 @@ -33,7 +33,6 @@ void sh_dmac_device::device_reset()
@@ -140,7 +140,21 @@ index 39775445..bb078d50 100644
  }
  
  sh_dmac_channel_device::sh_dmac_channel_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
-@@ -68,48 +72,84 @@ void sh_dmac_channel_device::device_reset()
+@@ -56,6 +60,8 @@ void sh_dmac_channel_device::device_start()
+ 	save_item(NAME(m_dar));
+ 	save_item(NAME(m_dmatcr));
+ 	save_item(NAME(m_chcr));
++	save_item(NAME(m_active));
++	m_timer = timer_alloc(FUNC(sh_dmac_channel_device::transfer_done), this);
+ }
+ 
+ void sh_dmac_channel_device::device_reset()
+@@ -64,52 +70,103 @@ void sh_dmac_channel_device::device_reset()
+ 	m_dar = 0;
+ 	m_dmatcr = 0;
+ 	m_chcr = 0;
++	m_active = false;
+ }
  
  u32 sh_dmac_channel_device::sar_r()
  {
@@ -209,6 +223,20 @@ index 39775445..bb078d50 100644
 +		logerror("unsupported request source %x\n", rs);
 +		return;
 +	}
++	if(m_active)
++		return;
++	// Takes time on the real chip (about two bus cycles per unit); finishing at once would raise
++	// DEI inside the interrupt handler that started the transfer
++	m_active = true;
++	u32 units = m_dmatcr & 0xffffff;
++	m_timer->adjust(m_cpu->cycles_to_attotime(4 * (units ? units : 0x1000000)));
++}
++
++TIMER_CALLBACK_MEMBER(sh_dmac_channel_device::transfer_done)
++{
++	m_active = false;
++	if(!BIT(m_chcr, 0) || BIT(m_chcr, 1))
++		return;
 +	address_space &space = m_cpu->space(AS_PROGRAM);
 +	int ts = (m_chcr >> 3) & 3;
 +	int size = ts == 0 ? 1 : ts == 1 ? 2 : 4;
@@ -234,7 +262,7 @@ index 39775445..bb078d50 100644
 +	}
  }
 diff --git a/src/devices/cpu/sh/sh_dmac.h b/src/devices/cpu/sh/sh_dmac.h
-index 3c8436df..96c08e97 100644
+index 3c8436df..33e6ebdd 100644
 --- a/src/devices/cpu/sh/sh_dmac.h
 +++ b/src/devices/cpu/sh/sh_dmac.h
 @@ -31,6 +31,7 @@ public:
@@ -245,7 +273,7 @@ index 3c8436df..96c08e97 100644
  
  
  protected:
-@@ -62,6 +63,7 @@ public:
+@@ -62,12 +63,16 @@ public:
  	void dmatcr_w(offs_t, u32 data, u32 mem_mask);
  	u32 chcr_r();
  	void chcr_w(offs_t, u32 data, u32 mem_mask);
@@ -253,6 +281,15 @@ index 3c8436df..96c08e97 100644
  
  protected:
  	required_device<sh7042_device> m_cpu;
+ 	required_device<sh_intc_device> m_intc;
+ 
+ 	u32 m_sar, m_dar, m_dmatcr, m_chcr;
++	bool m_active;
++	emu_timer *m_timer;
++	TIMER_CALLBACK_MEMBER(transfer_done);
+ 
+ 	virtual void device_start() override ATTR_COLD;
+ 	virtual void device_reset() override ATTR_COLD;
 diff --git a/src/devices/cpu/sh/sh_mtu.cpp b/src/devices/cpu/sh/sh_mtu.cpp
 index 532a47da..997fba93 100644
 --- a/src/devices/cpu/sh/sh_mtu.cpp

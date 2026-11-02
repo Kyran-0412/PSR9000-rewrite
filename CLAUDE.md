@@ -196,8 +196,8 @@ DATA DIAL (found):
 2. Build memory map (find LCDC via SED1335 command bytes 0x40/0x42/0x44/0x46).
 3. DONE: tools/res_extract.py extracts all UI bitmaps (checksum of .001 still unknown).
 4. DONE (Rom Chk1, tools/romcheck.py). Installer/boot check still unseen (boot area not in files).
-5. MAME driver skeleton: stub vector table at 0 jumping to 0x206E8 (real bootloader not
-   in update files). Milestone: boot screen in emulation. Then panel input, sub CPU, SWP30.
+5. MAME driver: HOME SCREEN REACHED in emulation (docs/EMULATOR.md 3d; sub CPU + SCSI faked,
+   MAME core patches in mame/patches/). Next: panel input (UART ch3 HLE), Windows build.
 6. Later: .VIC custom voice format, debug output over TO HOST serial / MIDI SysEx,
    first harmless real-hardware test (string edit), font replacement, UI redesign.
 
