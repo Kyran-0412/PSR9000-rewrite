@@ -124,8 +124,10 @@ static void set_reverb_saved(int part, int v)
 /* ---- drawing into the 320x240 1-bit framebuffer (bit set = dark) ---- */
 #define W 320
 #define H 240
-#define K 1      /* dark */
-#define WT 0     /* light */
+/* On the real LCD a SET bit shows as the light (yellow) colour and a clear bit as blue
+ * (checked by Kyran against the keyboard). The mockup's white = yellow, black = blue. */
+#define K 0      /* ink (blue) */
+#define WT 1     /* paper (yellow) */
 static const u8 bit[8] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
 static const u8 lmask[8] = { 0xff, 0x7f, 0x3f, 0x1f, 0x0f, 0x07, 0x03, 0x01 };
 

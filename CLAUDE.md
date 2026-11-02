@@ -180,7 +180,9 @@ DATA DIAL (found):
   12-byte record: u16 w, u16 h, u32 flags, u32 ptr-to-pixels. Main code points at the RECORDS
   (909 literal refs). flags 0 = raw 1bpp rows (byte padded); flags 0x01000000 = compressed:
   u16 len, then 0x00-0x7F = 7 literal px, 0x80+n = n+1 px off, 0xC0+n = n+1 px on; a literal is
-  cut off at row end. Bit 1 = dark pixel. 237 compressed + 793 raw, all decode exactly.
+  cut off at row end. Bit 1 = "ink" in the bitmaps, BUT on the real LCD a set framebuffer bit
+  shows LIGHT (pastel yellow) and a clear bit BLUE (confirmed by Kyran on the keyboard; the
+  emulator palette and mod/home use this). 237 compressed + 793 raw, all decode exactly.
 - UI screens are built from widget objects: 0xDEB18 = widget_set_image (stores record ptr at +32).
 - Home screen: top half = image record 0x5F7B6C (drawn by code at ~0x69640, also loads the
   octave -1/0/+1 and bottom-bar icons). Song/lyrics variant = 0x5A1F64 (code ~0x1DC6C0).
