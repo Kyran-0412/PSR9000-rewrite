@@ -34,7 +34,13 @@ typedef unsigned int u32;
 #define get_tempo    FW(0x904ce, int (*)(void))
 #define get_transpose FW(0x51388, int (*)(void))               /* signed byte */
 #define get_octave   FW(0x4005e, int (*)(void))                /* 0..2 = -1..+1 */
-#define STYLE_NAME   (*(const char *volatile *)0x108f098)      /* set by the stock home screen */
+/* Current style: number from 0x8F400 (the selected style, or the one about to change to);
+ * 0-124 = preset (names: 12-byte entries at 0x3892E8), 125-244 = flash style (name pointers at
+ * 0x1093E98, filled when styles are loaded). Same split as the firmware's own name lookup
+ * 0x8EFDE / 0x13F222. (RAM 0x108F098, used before, only held the preset name from boot.) */
+#define cur_style    FW(0x8f400, int (*)(void))
+#define PRESET_STYLE_NAMES 0x3892e8
+#define FLASH_STYLE_NAMES ((const char *const *)0x1093e98)
 #define lcd_refresh  FW(0x10bf60, void (*)(u8 *fb, const short *rect))
 #define ui_flush_fn  FW(0x10bb0c, void (*)(void))
 #define FRAMEBUFFER  ((u8 *)0x10c8aec)
@@ -402,6 +408,16 @@ static const char *const ctrl_name[4] = { "VOL", "BRT", "REV", "PAN" };
 
 /* everything shown on screen, so a change made elsewhere (other task, registration recall,
  * part buttons, voice select) triggers a redraw */
+static const char *style_name(void)
+{
+	int n = cur_style() & 0xffff;
+	if(n < 125)
+		return (const char *)(PRESET_STYLE_NAMES + mul(n, 12));
+	if(n < 245)
+		return FLASH_STYLE_NAMES[n - 125];
+	return "";
+}
+
 static u32 values_sig(void)
 {
 	u32 s = 0;
@@ -413,7 +429,9 @@ static u32 values_sig(void)
 		s = rotl1(s) ^ (u32)(part_on(p) & 1) ^ (u32)voice_name(p);
 	}
 	s ^= (u32)voice_name(3);
-	n = STYLE_NAME;
+	n = style_name();
+	for(c = 0; c < 11 && n[c]; c++)          /* contents too: a reloaded flash slot keeps its pointer */
+		s = rotl1(s) ^ (u8)n[c];
 	s = rotl1(s) ^ (u32)n ^ (u32)get_tempo() ^ shl(get_transpose() & 0xff, 8) ^ shl(get_octave() & 3, 16);
 	return s;
 }
@@ -508,7 +526,7 @@ static void draw_screen(int op, int oc, int ov)
 
 	/* ---- status bar: Yamaha style, blue bar with yellow text and the stock icons ---- */
 	fill(0, 0, W - 1, 18, K);
-	copy_name(buf, STYLE_NAME, 24);
+	copy_name(buf, style_name(), 11);
 	text(8, 9, buf, FT_VALUE, WT, 'l');
 	x = W - 8;
 	num(buf, get_octave() - 1, 1);                 /* octave: keyboard icon + value */

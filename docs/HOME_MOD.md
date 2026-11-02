@@ -13,8 +13,11 @@ Draws the whole home screen like the v3 mockup:
   pages (the whole stock home screen comes back there); MAIN MIXER returns to the new screen.
 
 Data read from the firmware: voice_name(part) 0x3FFF4, part_on(part) 0x40048, tempo
-0x904CE(), transpose (signed) 0x51388(), octave 0x4005E()-1, style name pointer at RAM
-0x108F098 (kept by the stock home screen), volume/brightness/reverb getters.
+0x904CE(), transpose (signed) 0x51388(), octave 0x4005E()-1, volume/brightness/reverb getters.
+Style name (fixed 2026-11, the old pointer at RAM 0x108F098 only held the preset name from boot,
+so flash styles never showed): current style number 0x8F400() (u16 0x10F3AFE / pending
+0x10F3B00), 0-124 preset name = 0x3892E8 + 12n, 125-244 flash name = pointer table 0x1093E98
+[n-125] (the firmware's own lookup: 0x8EFDE / 0x13F222).
 
 ## How it is built
 `mod/home/hp.c` (C, ~4 KB with fonts) compiled for SH-2 with the SH-4 cross compiler
