@@ -34,6 +34,8 @@
 #include "screen.h"
 #include "speaker.h"
 
+#include "psr9000.lh"
+
 #include <deque>
 #include <map>
 
@@ -59,6 +61,7 @@ public:
 		, m_subrom(*this, "subrom")
 		, m_styrom(*this, "styrom")
 		, m_dial(*this, "DIAL")
+		, m_dialbtn(*this, "DIALBTN")
 	{ }
 
 	DECLARE_INPUT_CHANGED_MEMBER(panel_button);
@@ -76,6 +79,8 @@ private:
 	required_region_ptr<u8> m_subrom;
 	required_region_ptr<u16> m_styrom;
 	required_ioport m_dial;
+	required_ioport m_dialbtn;
+	int m_dialbtn_hold = 0;
 
 	// Front panel CPU (MN101C027, mask ROM not dumped) simulated: sends button and dial packets
 	// to the main CPU over quad UART channel 3 (31250 baud, 8N2).
@@ -400,6 +405,14 @@ TIMER_CALLBACK_MEMBER(psr9000_state::dial_poll)
 	u8 cur = m_dial->read();
 	s8 delta = s8(cur - m_dial_last);
 	m_dial_last = cur;
+	// clickable dial halves: one step on press, then repeat while held
+	u8 btn = m_dialbtn->read() & 3;
+	if(btn == 1 || btn == 2) {
+		if(m_dialbtn_hold == 0 || (m_dialbtn_hold >= 40 && m_dialbtn_hold % 6 == 0))
+			delta += btn == 2 ? 1 : -1;
+		m_dialbtn_hold++;
+	} else
+		m_dialbtn_hold = 0;
 	if(delta) {
 		int n = delta > 0 ? delta : -delta;
 		panel_send(delta > 0 ? 0xd0 : 0xd8, (n >> 4) & 7, n & 15);
@@ -656,6 +669,10 @@ static INPUT_PORTS_START( psr9000 )
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_NAME("REGIST 8") PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psr9000_state::panel_button), 0x107)
 	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_NAME("MEMORY") PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psr9000_state::panel_button), 0x108)
 
+	PORT_START("DIALBTN")
+	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Data Dial -") PORT_CODE(KEYCODE_DOWN)
+	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_NAME("Data Dial +") PORT_CODE(KEYCODE_UP)
+
 	PORT_START("DIAL")
 	PORT_BIT(0xff, 0x00, IPT_DIAL) PORT_NAME("Data Dial") PORT_SENSITIVITY(25) PORT_KEYDELTA(1) PORT_CODE_DEC(KEYCODE_LEFT) PORT_CODE_INC(KEYCODE_RIGHT)
 INPUT_PORTS_END
@@ -678,6 +695,7 @@ void psr9000_state::psr9000(machine_config &config)
 	screen.set_size(320, 240);
 	screen.set_visarea(0, 320-1, 0, 240-1);
 	screen.set_palette(palette);
+	config.set_default_layout(layout_psr9000);
 
 	SED1330(config, m_lcdc, 8'000'000); // really a SED1335, clock not verified
 	m_lcdc->set_screen("screen");
