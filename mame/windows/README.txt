@@ -30,8 +30,14 @@ Using it
       Numpad - + = UPPER OCTAVE
 - MAME keys to know: Esc = quit, Tab = MAME menu (change keys, Video Options > view),
   P = pause, F12 = screenshot (saved in "snap").
-- Views (Tab > Video Options): Full Panel (default), Centre Panel (bigger screen),
-  Screen Only.
+- Views (Tab > Video Options): Centre Panel (default), Full Panel, Screen Only.
+- Pixel-exact LCD: the .bat files open the Centre Panel maximized with "-nounevenstretch",
+  so the LCD is always shown at a whole-number zoom (2x on a 1920x1080 monitor) and no pixel
+  row or column is dropped or doubled. The Full Panel (1970 px wide) does not fit a
+  1920 px monitor, so MAME has to shrink it slightly and thin lines can vanish: use it only
+  to find a button, not to judge the screen design. Screen Only gives the biggest LCD.
+  If an old setup still opens the Full Panel, pick Centre Panel once in Tab > Video Options
+  (MAME remembers it in the cfg folder).
 
 Resetting the emulated keyboard: quit, then delete the "nvram" folder.
 
