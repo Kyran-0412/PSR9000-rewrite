@@ -21,9 +21,11 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. More later.
-Current layout: mockups/home_v5.py (= v4 + TEMPO box on LCD 1, everything else one button right;
+Current layout: mockups/home_v6.py (= v5 + Yamaha-style blue status bar with yellow text and the
+stock transpose/octave icons, metronome icon under TEMPO; v5 = v4 + TEMPO box on LCD 1,
+everything else one button right;
 v4 = v3 + Bold text, 2 px borders, border around each control; v1-v4 are earlier drafts).
-IMPLEMENTED (full screen as mockup v5, mod v4): mod/home/ (C code + hooks), docs/HOME_MOD.md.
+IMPLEMENTED (full screen as mockup v6, mod v5): mod/home/ (C code + hooks), docs/HOME_MOD.md.
 Kyran wants the mockup design EXACTLY; do not invent a different layout.
 Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
 

@@ -267,6 +267,58 @@ static void text(int x, int y, const char *s, const font_t *f, int on, char h)
 	}
 }
 
+/* ---- the firmware's own images (p9000m.001, mapped at 0x4F0000) ----
+ * Record = u16 w, u16 h, u32 flags (0 raw, 0x01000000 compressed), u32 pointer to pixels.
+ * The stock screens copy image bits to the framebuffer unchanged, so a bit is a framebuffer
+ * bit (1 = yellow, 0 = blue on the real LCD). Nothing is copied into this mod: the pixels are
+ * read from Yamaha's resource area at run time. */
+#define IMG_OCTAVE0   0x5f7bac   /* 34x10 octave "0": keyboard block in columns 0-18 */
+#define IMG_TRANSPOSE 0x5f7cbc   /* 23x12 transpose icon (keyboard mode) */
+#define IMG_HOME_BG   0x5f7b6c   /* 320x240 stock home background (compressed), metronome
+                                  * icon at 135,133 size 14x12 */
+struct img_rec { u16 w, h; u32 flags; const u8 *px; };
+
+/* copy part of a raw image; inv: draw inverted (for the blue status bar) */
+static void blit_raw(u32 rec, int sx, int sy, int w, int h, int dx, int dy, int inv)
+{
+	const struct img_rec *r = (const struct img_rec *)rec;
+	int bpr = shr(r->w + 7, 3), x, y;
+	for(y = 0; y < h; y++) {
+		const u8 *row = r->px + mul(sy + y, bpr);
+		for(x = 0; x < w; x++) {
+			int b = (row[shr(sx + x, 3)] & bit[(sx + x) & 7]) ? 1 : 0;
+			px(dx + x, dy + y, b ^ inv);
+		}
+	}
+}
+
+/* copy part of a compressed image: u16 length, then 0x00-0x7F = 7 literal pixels (cut at the
+ * row end), 0x80+n = n+1 pixels of 0, 0xC0+n = n+1 pixels of 1 */
+static void blit_comp(u32 rec, int sx, int sy, int w, int h, int dx, int dy)
+{
+	const struct img_rec *r = (const struct img_rec *)rec;
+	const u8 *p = r->px + 2, *end = p + (r->px[0] * 256 + r->px[1]);
+	int x = 0, y = 0;
+	while(p < end && y < sy + h) {
+		u8 c = *p++;
+		if(c < 0x80) {
+			int k;
+			for(k = 6; k >= 0; k--) {
+				if(y >= sy && x >= sx && x < sx + w)
+					px(dx + x - sx, dy + y - sy, (c & bit[7 - k]) ? 1 : 0);
+				if(++x == r->w) { x = 0; y++; break; }
+			}
+		} else {
+			int n = (c & 0x3f) + 1, v = (c & 0x40) ? 1 : 0;
+			while(n--) {
+				if(y >= sy && y < sy + h && x >= sx && x < sx + w)
+					px(dx + x - sx, dy + y - sy, v);
+				if(++x == r->w) { x = 0; y++; }
+			}
+		}
+	}
+}
+
 /* ---- small string helpers (no libc) ---- */
 static char *cat(char *d, const char *s) { while(*s) *d++ = *s++; *d = 0; return d; }
 
@@ -379,21 +431,20 @@ static void draw_screen(int op, int oc, int ov)
 	}
 	fill(0, 0, W - 1, H - 1, WT);
 
-	/* ---- status bar ---- */
+	/* ---- status bar: Yamaha style, blue bar with yellow text and the stock icons ---- */
+	fill(0, 0, W - 1, 18, K);
 	copy_name(buf, STYLE_NAME, 24);
-	text(8, 9, buf, &f_smallb, K, 'l');
+	text(8, 9, buf, &f_smallb, WT, 'l');
 	x = W - 8;
-	for(i = 0; i < 3; i++) {
-		int w;
-		if(i == 0) { e = cat(buf, "OCT "); num(e, get_octave() - 1, 1); }
-		else if(i == 1) { e = cat(buf, "TRP "); num(e, (signed char)get_transpose(), 1); }
-		else { e = num(buf, get_tempo(), 0); cat(e, " BPM"); }
-		w = text_width(&f_tiny, buf) + 10;
-		rrect2(x - w, 3, x, 15, 6, K);
-		text(x - half(w), 9, buf, &f_tiny, K, 'm');
-		x -= w + 4;
-	}
-	hspan(0, W - 1, 19, K);
+	num(buf, get_octave() - 1, 1);                 /* octave: keyboard icon + value */
+	text(x, 9, buf, &f_smallb, WT, 'r');
+	x -= text_width(&f_smallb, buf) + 4;
+	blit_raw(IMG_OCTAVE0, 0, 0, 19, 10, x - 19, 4, 0);
+	x -= 19 + 12;
+	num(buf, (signed char)get_transpose(), 1);     /* transpose: arrows + keyboard icon + value */
+	text(x, 9, buf, &f_smallb, WT, 'r');
+	x -= text_width(&f_smallb, buf) + 3;
+	blit_raw(IMG_TRANSPOSE, 0, 0, 23, 12, x - 23, 3, 1);
 
 	/* ---- layer cards (display only; selected part marked with a side tab) ---- */
 	for(i = 0; i < 3; i++) {
@@ -436,11 +487,9 @@ static void draw_screen(int op, int oc, int ov)
 		const int top = 136;
 		hspan(0, W - 1, top, K);
 		text(100, top + 9, "PART", &f_tiny, K, 'm');
-		if(ts) {
-			e = cat(buf, "TEMPO  ");
-			e = num(e, get_tempo(), 0);
-			cat(e, " BPM");
-		} else {
+		if(ts)
+			buf[0] = 0;                      /* tempo selected: nothing above the controls */
+		else {
 			e = cat(buf, part_label[sp]);
 			e = cat(e, "  ");
 			cat(e, name[sp]);
@@ -459,7 +508,7 @@ static void draw_screen(int op, int oc, int ov)
 			else { rrect2(5, top + 20, 35, top + 44, 8, K); fg = K; }
 			num(buf, get_tempo(), 0);
 			text(20, top + 32, buf, &f_val, fg, 'm');
-			text(20, top + 56, "TEMPO", &f_tiny, K, 'm');
+			blit_comp(IMG_HOME_BG, 135, 133, 14, 12, 13, top + 50);   /* stock metronome icon */
 			text(20, top + 70, "BPM", &f_tiny, K, 'm');
 		}
 
