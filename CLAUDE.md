@@ -12,18 +12,19 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    show the ACTIVE layers (R1/R2/R3 voice + on/off) in the centre. LEFT/SONG/STYLE can shrink
    to a status line. Frees the 10 side buttons (A-E left, F-J right) for new functions.
 2. Bottom row (LCD buttons 1-8, UP/DOWN pairs): (v5) button 1 = TEMPO (selected: the dial
-   changes tempo), buttons 2-4 SELECT THE PART (R1/R2/R3), buttons 5-7 = controls, 8 free;
+   changes tempo), buttons 2-4 SELECT THE PART (R1/R2/R3), buttons 5-8 = controls;
    the DIAL changes the value (like the rest
    of the PSR-9000; the stock home mixer uses up/down per channel, which annoys him). Other
    volumes (SONG, ACMP, M.PAD, LEFT, MIC, song/style tracks) move to a sub-menu.
 3. Controls (decided): VOLUME (CC7), BRIGHT (CC74), REVERB (param id 11; DOWN toggles on/off and restores
-   the previous level). Slot 8 left empty for later. NOT octave/transpose (own panel buttons).
+   the previous level), PAN on slot 8 (param id 6, getter 0x50C34, shown as a knob). NOT octave/transpose (own panel buttons).
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. Boot splash: KyranOS, Kyran's own logo (mockups/splash_v2.py + splash_kyran_source.webp),
    DONE in the mod (v1 generated design kept in splash_v1.py).
 6. More later.
-Current layout: mockups/home_v7.py (= v6 + dotted texture behind the layers, solid panels behind
+Current layout: mockups/home_v9.py (= v8 + PAN knob on LCD 8, no borders around the controls:
+selected = filled dot + inverted name, dotted lines between controls; v8 = v7 + EQ tab; v7 = v6 + dotted texture behind the layers, solid panels behind
 off layers/LEFT, bottom section inverted to a blue panel; v6 = v5 + Yamaha-style blue status bar with yellow text and the
 stock transpose/octave icons, metronome icon under TEMPO; v5 = v4 + TEMPO box on LCD 1,
 everything else one button right;

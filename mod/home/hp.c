@@ -29,6 +29,7 @@ typedef unsigned int u32;
 #define get_volume   FW(0x50c18, int (*)(int part))
 #define get_bright   FW(0x50cd4, int (*)(int part))
 #define get_reverb   FW(0x50cf0, int (*)(int part))
+#define get_pan      FW(0x50c34, int (*)(int part))           /* 0 = L63, 64 = centre, 127 = R63 */
 #define voice_name   FW(0x3fff4, const char *(*)(int part))   /* part 0-2 = R1-R3, 3 = LEFT */
 #define part_on      FW(0x40048, int (*)(int part))
 #define get_tempo    FW(0x904ce, int (*)(void))
@@ -238,14 +239,6 @@ static void rrect2(int x0, int y0, int x1, int y1, int r, int on)
 	rrect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, r > 1 ? r - 1 : 1, 0, on);
 }
 
-/* mockup v4 dashed_box: 2x2 dashes every 5 px, 6 px in from the corners */
-static void dashed_box(int x0, int y0, int x1, int y1)
-{
-	int x, y;
-	for(x = x0 + 6; x < x1 - 6; x += 5) { fill(x, y0, x + 1, y0 + 1, K); fill(x, y1 - 1, x + 1, y1, K); }
-	for(y = y0 + 6; y < y1 - 6; y += 5) { fill(x0, y, x0 + 1, y + 1, K); fill(x1 - 1, y, x1, y + 1, K); }
-}
-
 static const glyph_t *find_glyph(const font_t *f, char c)
 {
 	int i;
@@ -387,13 +380,14 @@ static int get_ctrl(int part, int ctrl)
 	switch(ctrl) {
 	case 0: return get_volume(part);
 	case 1: return get_bright(part);
-	default: return get_reverb(part);
+	case 2: return get_reverb(part);
+	default: return get_pan(part);
 	}
 }
 
 static void set_ctrl(int part, int ctrl, int value)
 {
-	static const u8 id[3] = { 5, 10, 11 };   /* VOLUME, BRIGHTNESS, REVERB SEND (category 2) */
+	static const u8 id[4] = { 5, 10, 11, 6 };   /* VOLUME, BRIGHTNESS, REVERB SEND, PAN (category 2) */
 	u8 data[2];
 	if(value < 0) value = 0;
 	if(value > 127) value = 127;
@@ -404,7 +398,7 @@ static void set_ctrl(int part, int ctrl, int value)
 
 /* ---- the screen ---- */
 static const char *const part_label[3] = { "R1", "R2", "R3" };
-static const char *const ctrl_name[3] = { "VOLUME", "BRIGHT", "REVERB" };
+static const char *const ctrl_name[4] = { "VOLUME", "BRIGHT", "REVERB", "PAN" };
 
 /* everything shown on screen, so a change made elsewhere (other task, registration recall,
  * part buttons, voice select) triggers a redraw */
@@ -414,7 +408,7 @@ static u32 values_sig(void)
 	int p, c;
 	const char *n;
 	for(p = 0; p < 3; p++) {
-		for(c = 0; c < 3; c++)
+		for(c = 0; c < 4; c++)
 			s = rotl1(rotl1(rotl1(s))) ^ (u32)(get_ctrl(p, c) & 0xff);
 		s = rotl1(s) ^ (u32)(part_on(p) & 1) ^ (u32)voice_name(p);
 	}
@@ -471,6 +465,31 @@ static void invert_rows(int y0, int y1)
 		for(b = 0; b < 40; b++)
 			row[b] = ~row[b];
 	}
+}
+
+/* pan knob pointer end (dx, dy) for 0..127: -135 deg (L63) .. +135 deg (R63), length 8 */
+static const signed char pan_tip[256] = {-5,6,-6,6,-6,5,-6,5,-6,5,-6,5,-7,5,-7,4,-7,4,-7,4,-7,3,-7,3,-7,3,-8,3,-8,2,-8,2,-8,2,-8,1,-8,1,-8,1,-8,1,-8,0,-8,0,-8,0,-8,-1,-8,-1,-8,-1,-8,-1,-8,-2,-8,-2,-8,-2,-8,-3,-7,-3,-7,-3,-7,-3,-7,-4,-7,-4,-7,-4,-7,-5,-6,-5,-6,-5,-6,-5,-6,-5,-6,-6,-5,-6,-5,-6,-5,-6,-5,-6,-5,-7,-4,-7,-4,-7,-4,-7,-3,-7,-3,-7,-3,-7,-3,-8,-2,-8,-2,-8,-2,-8,-1,-8,-1,-8,-1,-8,-1,-8,0,-8,0,-8,0,-8,1,-8,1,-8,1,-8,1,-8,2,-8,2,-8,2,-8,3,-8,3,-7,3,-7,3,-7,4,-7,4,-7,4,-7,5,-7,5,-6,5,-6,5,-6,5,-6,6,-6,6,-5,6,-5,6,-5,6,-5,7,-5,7,-4,7,-4,7,-4,7,-3,7,-3,7,-3,8,-3,8,-2,8,-2,8,-2,8,-1,8,-1,8,-1,8,-1,8,0,8,0,8,0,8,1,8,1,8,1,8,1,8,2,8,2,8,2,8,3,7,3,7,3,7,3,7,4,7,4,7,4,7,5,6,5,6,5,6,5,6,5,6,6};
+
+static int sdiv16(int v) { return v < 0 ? -(int)shr(-v, 4) : (int)shr(v, 4); }
+
+static void pan_knob(int cx, int cy, int v)
+{
+	int k, dx = pan_tip[mul(v & 127, 2)], dy = pan_tip[mul(v & 127, 2) + 1];
+	rrect2(cx - 10, cy - 10, cx + 10, cy + 10, 10, K);
+	for(k = 0; k <= 16; k++) {               /* 2 px wide pointer */
+		int x = cx + sdiv16(mul(dx, k)), y = cy + sdiv16(mul(dy, k));
+		fill(x, y, x + 1, y + 1, K);
+	}
+	px(cx, cy - 13, K);                      /* centre mark */
+	text(cx - 13, cy + 10, "L", &f_tiny, K, 'm');
+	text(cx + 13, cy + 10, "R", &f_tiny, K, 'm');
+}
+
+static char *pan_text(char *d, int v)    /* 64 -> "C", 44 -> "L20", 84 -> "R20" */
+{
+	if(v == 64) return cat(d, "C");
+	*d++ = v < 64 ? 'L' : 'R';
+	return num(d, v < 64 ? 64 - v : v - 64, 0);
 }
 
 static void draw_screen(int op, int oc, int ov)
@@ -598,29 +617,39 @@ static void draw_screen(int op, int oc, int ov)
 			text(x + 20, top + 70, buf, &f_tiny, K, 'm');
 		}
 
-		/* controls (buttons 5-8) for the selected part */
+		/* controls (buttons 5-8) for the selected part (mockup v9): no borders; selected =
+		 * filled dot above the name and the name inverted; dotted lines between them */
+		for(j = 1; j < 4; j++)
+			for(y = top + 18; y < H - 3; y += 2)
+				px((j + 4) * 40, y, K);
 		for(j = 0; j < 4; j++) {
-			int fg, v, y0 = top + 54, y1 = H - 22, fh;
+			int v, y0 = top + 57, y1 = H - 22, fh, cx, sel;
 			x = (j + 4) * 40;
-			if(j >= 3) {                     /* free slot: faint dashed outline only */
-				dashed_box(x, top + 17, x + 38, H - 3);
+			cx = x + 20;
+			sel = j == sc && !ts;
+			v = val(sp, j, op, oc, ov);
+			rrect(cx - 3, top + 18, cx + 3, top + 24, 3, sel, K);
+			if(sel)
+				rrect(x + 1, top + 26, x + 39, top + 36, 5, 1, K);
+			text(cx, top + 31, ctrl_name[j], &f_tiny, sel ? WT : K, 'm');
+			if(j == 3)
+				pan_text(buf, v);
+			else
+				num(buf, v, 0);
+			text(cx, top + 45, buf, &f_val, K, 'm');
+			if(j == 3) {
+				pan_knob(cx, 205, v);
 				continue;
 			}
-			v = val(sp, j, op, oc, ov);
-			if(j == sc && !ts) { rrect(x, top + 17, x + 38, H - 3, 7, 1, K); fg = WT; }
-			else { rrect(x, top + 17, x + 38, H - 3, 7, 0, K); fg = K; }
-			text(x + 19, top + 27, ctrl_name[j], &f_tiny, fg, 'm');
-			num(buf, v, 0);
-			text(x + 19, top + 41, buf, &f_val, fg, 'm');
 			for(y = y0; y <= y1; y += 2)
-				px(x + 20, y, fg);
+				px(cx, y, K);
 			fh = 0;
 			{ int t = (y1 - y0) * v; while(t >= 127) { t -= 127; fh++; } }   /* (y1-y0)*v/127 */
 			if(fh)
-				rrect(x + 17, y1 - fh, x + 23, y1, 3, 1, fg);
+				rrect(cx - 3, y1 - fh, cx + 3, y1, 3, 1, K);
 			if(j == 2) {                     /* REVERB on/off pill */
-				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, fg); text(x + 20, H - 11, "ON", &f_tiny, fg == K ? WT : K, 'm'); }
-				else { rrect2(x + 9, H - 16, x + 31, H - 6, 5, fg); text(x + 20, H - 11, "OFF", &f_tiny, fg, 'm'); }
+				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, K); text(cx, H - 11, "ON", &f_tiny, WT, 'm'); }
+				else { rrect2(x + 9, H - 16, x + 31, H - 6, 5, K); text(cx, H - 11, "OFF", &f_tiny, K, 'm'); }
 			}
 		}
 	}
@@ -936,8 +965,8 @@ void hp_step(int btn, int step)
 		set_tempo_sel();                     /* LCD 1: TEMPO, the dial changes tempo */
 	else if(n < 4)
 		set_sel(n - 1, sel_ctrl());          /* LCD 2-4: R1-R3 */
-	else if(n < 7) {
-		int c = n - 4, p = sel_part();       /* LCD 5-7: VOLUME / BRIGHT / REVERB */
+	else {
+		int c = n - 4, p = sel_part();       /* LCD 5-8: VOLUME / BRIGHT / REVERB / PAN */
 		if(c == 2 && down) {
 			/* reverb on/off for the selected part */
 			int v = get_reverb(p);

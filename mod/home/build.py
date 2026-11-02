@@ -26,7 +26,7 @@ FONTS = [  # name, file, size, characters (same fonts and sizes as mockups/home_
     ('f_small', 'Inter-Bold.otf', 10, ASCII),
     ('f_smallb', 'Inter-Bold.otf', 10, ASCII),
     ('f_name', 'Inter-Bold.otf', 14, ASCII),
-    ('f_val', 'Inter-Bold.otf', 13, '0123456789-+OFNR.k'),
+    ('f_val', 'Inter-Bold.otf', 13, '0123456789-+OFNR.kLC'),
 ]
 
 

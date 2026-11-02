@@ -91,6 +91,12 @@ Two causes, both about redrawing once a second although nothing changed: the sto
 stock UI flush (0x10BB0C) copies the stock screen over ours about once a second (skipped while
 our screen is up). Verified in the emulator: no framebuffer writes at all over 14 s idle.
 
+## PAN + borderless controls (mod v10, mockups/home_v9.py)
+LCD 8 = PAN of the selected part (category 2 id 6, getter 0x50C34; 64 = C, shown L1-L63 /
+R1-R63) drawn as a knob (-135..+135 degrees, pointer table in hp.c). The controls have no
+borders: the selected one has a filled dot above its name and the name inverted on a pill;
+dotted lines separate the controls.
+
 ## Master EQ page (mod v9, mockups/eq_v2.py, home tab: mockups/home_v8.py)
 Own page on top of the home screen; the stock Mixing Console M.EQ page is unchanged and edits
 the same settings.
