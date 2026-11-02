@@ -1,4 +1,4 @@
-# New home screen (mod v3: the agreed design, mockups/home_v4.py)
+# New home screen (mod v4: the agreed design, mockups/home_v5.py)
 
 Draws the whole home screen like the v3 mockup:
 - status line: style name, (BPM) (TRP) (OCT) pills;
@@ -45,6 +45,17 @@ is known, so the state lives in the unused DMA channel 3 registers (SAR3/DAR3/DM
 - Real image: `python3 mod/home/make_image.py` -> `firmware/mod/p9000m.002-.004` with Rom
   Chk1 and the byte sum fixed (only .002 and .004 change). Boots in the emulator from the
   files alone. NOT tested on the keyboard; follow docs/RECOVERY.md first.
+
+## Layout v5 (mod v4)
+LCD 1 = TEMPO box (shows the BPM; selected: the dial changes tempo, header "TEMPO nnn BPM"),
+LCD 2-4 = R1/R2/R3 (selecting one gives the dial back to the controls), LCD 5-7 = VOLUME /
+BRIGHT / REVERB (LCD 7 DOWN = reverb on/off), LCD 8 free.
+
+## Old widgets flashing (fixed in mod v4)
+Stock widgets of the hidden home screen still redraw (e.g. transpose/octave) and sent their
+area to the LCD before we repainted. The graphics library's 16 pointers to the LCD refresh
+0x10BF60 now go to `hp_refresh`, which drops those requests while our screen is up. Checked
+with snapshots every frame after transpose/octave: no in-between frame.
 
 ## Flicker (fixed in mod v3)
 Two causes, both about redrawing once a second although nothing changed: the stock fader

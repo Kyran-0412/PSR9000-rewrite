@@ -146,6 +146,10 @@ def main():
     for i in range(16):    # per-button handlers: no auto-repeat (0x64 -> 0), new handler
         patches.append((0x3B1538 + 16 * i, be16(0), 'LCD button: no auto-repeat'))
         patches.append((0x3B153C + 16 * i, be32(syms['hp_step']), 'LCD button handler'))
+    for a in (0x1056CC, 0x1058FC, 0x105A9C, 0x105B84, 0x105E20, 0x106424, 0x10694C, 0x106E54,
+              0x107C28, 0x108B50, 0x109A78, 0x10A94C, 0x10B2D0, 0x10B868, 0x10BADC, 0x10BB20):
+        assert struct.unpack('>I', open(os.path.join(ROOT, 'firmware', 'main_prog.bin'), 'rb').read()[a:a + 4])[0] == 0x10BF60
+        patches.append((a, be32(syms['hp_refresh']), 'graphics library LCD refresh -> filter'))
     for i in range(8):     # fader value-changed callbacks -> redraw
         patches.append((0x3B1488 + 4 * i, be32(syms['hp_changed']), 'value changed callback'))
 

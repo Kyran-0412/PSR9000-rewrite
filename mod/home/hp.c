@@ -1,4 +1,5 @@
-/* New home screen for the PSR-9000 (V3.06): the agreed design, mockups/home_v4.py
+/* New home screen for the PSR-9000 (V3.06): the agreed design, mockups/home_v5.py
+ * (v4 + TEMPO box on LCD 1, parts on LCD 2-4, controls on LCD 5-7, LCD 8 free;
  * (v3 + bolder text, 2 px borders, a border around each control).
  *
  *   status line : style name ............................ (140 BPM)(TRP 0)(OCT 0)
@@ -77,7 +78,8 @@ static int half(int v) { return v < 0 ? -(int)shr(-v, 1) : (int)shr(v, 1); }
  * No spare RAM is known, so the state lives in the address registers of DMA channel 3,
  * which the firmware never uses (no reference to 0xFFFF86F0-0xFFFF86FF):
  *   SAR3    = checksum of the screen (and values) right after we drew it
- *   DAR3    = [31..24] magic 0x5A, [23] dirty, [22..21] part, [20..19] control, [18] shown
+ *   DAR3    = [31..24] magic 0x5A, [23] dirty, [22..21] part, [20..19] control, [18] shown,
+ *             [17] TEMPO selected (the dial changes tempo)
  *   DMATCR3 = reverb level to restore, 8 bits per part (24-bit register)
  * On power-up the registers hold garbage, so the magic byte tells us to start fresh.
  */
@@ -97,7 +99,9 @@ static u32 st(void)
 }
 static int sel_part(void) { return shr(st(), 21) & 3; }
 static int sel_ctrl(void) { return shr(st(), 19) & 3; }
-static void set_sel(int part, int ctrl) { DAR3 = (st() & ~0x00780000u) | shl(part, 21) | shl(ctrl, 19) | 0x800000u; }
+static void set_sel(int part, int ctrl) { DAR3 = (st() & ~0x007a0000u) | shl(part, 21) | shl(ctrl, 19) | 0x800000u; }
+static int tempo_sel(void) { return shr(st(), 17) & 1; }
+static void set_tempo_sel(void) { DAR3 = st() | 0x820000u; }
 static void set_dirty(void) { DAR3 = st() | 0x800000u; }
 static int dirty(void) { return shr(st(), 23) & 1; }
 static void clear_dirty(void) { DAR3 = st() & ~0x800000u; }
@@ -367,7 +371,7 @@ static void draw_screen(int op, int oc, int ov)
 {
 	static const short rect[4] = { 0, 0, W, H };
 	char buf[40], name[3][24], *e;
-	int i, j, x, y, sp = sel_part(), sc = sel_ctrl(), on[3];
+	int i, j, x, y, sp = sel_part(), sc = sel_ctrl(), ts = tempo_sel(), on[3];
 
 	for(i = 0; i < 3; i++) {
 		copy_name(name[i], voice_name(i), 20);
@@ -414,7 +418,7 @@ static void draw_screen(int op, int oc, int ov)
 		} else
 			cat(buf, "OFF");
 		text(W - 31 - 8, y + 13, buf, &f_tiny, fg, 'r');
-		if(i == sp) {               /* selection marker: arrow tab on the left */
+		if(i == sp && !ts) {        /* selection marker: arrow tab on the left */
 			int k;
 			static const u8 tip[7] = { 5, 4, 3, 3, 2, 1, 0 };   /* triangle (22,y+7) (27,y+13) (22,y+19) */
 			for(k = 0; k <= 6; k++) {
@@ -431,20 +435,39 @@ static void draw_screen(int op, int oc, int ov)
 	{
 		const int top = 136;
 		hspan(0, W - 1, top, K);
-		text(60, top + 9, "PART", &f_tiny, K, 'm');
-		e = cat(buf, part_label[sp]);
-		e = cat(e, "  ");
-		cat(e, name[sp]);
-		upper(buf);
-		text(200, top + 9, buf, &f_tiny, K, 'm');
-		for(y = top + 18; y < H - 3; y += 2)
-			px(120, y, K);
+		text(100, top + 9, "PART", &f_tiny, K, 'm');
+		if(ts) {
+			e = cat(buf, "TEMPO  ");
+			e = num(e, get_tempo(), 0);
+			cat(e, " BPM");
+		} else {
+			e = cat(buf, part_label[sp]);
+			e = cat(e, "  ");
+			cat(e, name[sp]);
+			upper(buf);
+		}
+		text(240, top + 9, buf, &f_tiny, K, 'm');
+		for(y = top + 18; y < H - 3; y += 2) {
+			px(40, y, K);
+			px(160, y, K);
+		}
 
-		/* part selectors (buttons 1-3) */
+		/* tempo box (button 1) */
+		{
+			int fg;
+			if(ts) { rrect(5, top + 20, 35, top + 44, 8, 1, K); fg = WT; }
+			else { rrect2(5, top + 20, 35, top + 44, 8, K); fg = K; }
+			num(buf, get_tempo(), 0);
+			text(20, top + 32, buf, &f_val, fg, 'm');
+			text(20, top + 56, "TEMPO", &f_tiny, K, 'm');
+			text(20, top + 70, "BPM", &f_tiny, K, 'm');
+		}
+
+		/* part selectors (buttons 2-4) */
 		for(i = 0; i < 3; i++) {
 			int fg;
-			x = i * 40;
-			if(i == sp) { rrect(x + 5, top + 20, x + 35, top + 44, 8, 1, K); fg = WT; }
+			x = (i + 1) * 40;
+			if(i == sp && !ts) { rrect(x + 5, top + 20, x + 35, top + 44, 8, 1, K); fg = WT; }
 			else { rrect2(x + 5, top + 20, x + 35, top + 44, 8, K); fg = K; }
 			text(x + 20, top + 32, part_label[i], &f_val, fg, 'm');
 			text(x + 20, top + 56, on[i] ? "ON" : "OFF", &f_tiny, K, 'm');
@@ -452,16 +475,16 @@ static void draw_screen(int op, int oc, int ov)
 			text(x + 20, top + 70, buf, &f_tiny, K, 'm');
 		}
 
-		/* controls (buttons 4-8) for the selected part */
-		for(j = 0; j < 5; j++) {
+		/* controls (buttons 5-8) for the selected part */
+		for(j = 0; j < 4; j++) {
 			int fg, v, y0 = top + 54, y1 = H - 22, fh;
-			x = (j + 3) * 40;
+			x = (j + 4) * 40;
 			if(j >= 3) {                     /* free slot: faint dashed outline only */
 				dashed_box(x, top + 17, x + 38, H - 3);
 				continue;
 			}
 			v = val(sp, j, op, oc, ov);
-			if(j == sc) { rrect(x, top + 17, x + 38, H - 3, 7, 1, K); fg = WT; }
+			if(j == sc && !ts) { rrect(x, top + 17, x + 38, H - 3, 7, 1, K); fg = WT; }
 			else { rrect(x, top + 17, x + 38, H - 3, 7, 0, K); fg = K; }
 			text(x + 19, top + 27, ctrl_name[j], &f_tiny, fg, 'm');
 			num(buf, v, 0);
@@ -491,6 +514,18 @@ static int visible(void)
 
 /* ---- hooks ---- */
 
+/* LCD refresh requests of the stock graphics library (its 16 pointers to 0x10BF60 now point
+ * here). While our screen is up, stock widgets still redraw themselves underneath (e.g. the
+ * transpose/octave boxes); sending those areas to the LCD made the old widgets flash for a
+ * frame. Our own drawing calls 0x10BF60 directly. */
+int hp_refresh(u8 *fb, const short *rect)
+{
+	if(visible())
+		return 0;
+	lcd_refresh(fb, rect);
+	return 0;
+}
+
 /* update callbacks of the 8 stock faders (table 0x3B1488). The firmware calls them about once
  * a second whether or not anything changed, so they must not force a redraw (that was the
  * flicker); real changes are caught by values_sig() in hp_tick. */
@@ -513,10 +548,12 @@ void hp_step(int btn, int step)
 	(void)step;
 	if(n < 0 || n > 7)
 		return;
-	if(n < 3)
-		set_sel(n, sel_ctrl());
-	else if(n < 6) {
-		int c = n - 3, p = sel_part();
+	if(n == 0)
+		set_tempo_sel();                     /* LCD 1: TEMPO, the dial changes tempo */
+	else if(n < 4)
+		set_sel(n - 1, sel_ctrl());          /* LCD 2-4: R1-R3 */
+	else if(n < 7) {
+		int c = n - 4, p = sel_part();       /* LCD 5-7: VOLUME / BRIGHT / REVERB */
 		if(c == 2 && down) {
 			/* reverb on/off for the selected part */
 			int v = get_reverb(p);
@@ -541,6 +578,11 @@ int hp_dial(int amount, int dir)
 	int v;
 	if(!visible())
 		return orig_tempo_dial(amount, dir);
+	if(tempo_sel()) {
+		v = orig_tempo_dial(amount, dir);
+		set_dirty();
+		return v;
+	}
 	v = get_ctrl(sel_part(), sel_ctrl()) + (dir ? amount : -amount);
 	if(v < 0) v = 0;
 	if(v > 127) v = 127;

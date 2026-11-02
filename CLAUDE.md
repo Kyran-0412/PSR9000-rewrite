@@ -11,18 +11,19 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    with the on-screen R1/R2/R3 buttons, so the home screen becomes display-only for parts:
    show the ACTIVE layers (R1/R2/R3 voice + on/off) in the centre. LEFT/SONG/STYLE can shrink
    to a status line. Frees the 10 side buttons (A-E left, F-J right) for new functions.
-2. Bottom row (LCD buttons 1-8, UP/DOWN pairs): buttons 1-3 SELECT THE PART (R1/R2/R3),
-   buttons 4-8 select one of 5 CONTROLS for that part, the DIAL changes the value (like the rest
+2. Bottom row (LCD buttons 1-8, UP/DOWN pairs): (v5) button 1 = TEMPO (selected: the dial
+   changes tempo), buttons 2-4 SELECT THE PART (R1/R2/R3), buttons 5-7 = controls, 8 free;
+   the DIAL changes the value (like the rest
    of the PSR-9000; the stock home mixer uses up/down per channel, which annoys him). Other
    volumes (SONG, ACMP, M.PAD, LEFT, MIC, song/style tracks) move to a sub-menu.
 3. Controls (decided): VOLUME (CC7), BRIGHT (CC74), REVERB (param id 11; DOWN toggles on/off and restores
-   the previous level). Slots 7-8 left empty for later. NOT octave/transpose (own panel buttons).
+   the previous level). Slot 8 left empty for later. NOT octave/transpose (own panel buttons).
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. More later.
-Current layout: mockups/home_v4.py (= v3 + Bold text, 2 px borders, border around each control;
-v1-v3 are earlier drafts).
-IMPLEMENTED (full screen as mockup v4, mod v3): mod/home/ (C code + hooks), docs/HOME_MOD.md.
+Current layout: mockups/home_v5.py (= v4 + TEMPO box on LCD 1, everything else one button right;
+v4 = v3 + Bold text, 2 px borders, border around each control; v1-v4 are earlier drafts).
+IMPLEMENTED (full screen as mockup v5, mod v4): mod/home/ (C code + hooks), docs/HOME_MOD.md.
 Kyran wants the mockup design EXACTLY; do not invent a different layout.
 Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
 
