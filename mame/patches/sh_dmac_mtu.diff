@@ -1,5 +1,5 @@
 diff --git a/src/devices/cpu/sh/sh7042.cpp b/src/devices/cpu/sh/sh7042.cpp
-index 9fef06c6..f460221e 100644
+index 9fef06c6..975d517a 100644
 --- a/src/devices/cpu/sh/sh7042.cpp
 +++ b/src/devices/cpu/sh/sh7042.cpp
 @@ -263,7 +263,15 @@ void sh7042_device::map(address_map &map)
@@ -32,6 +32,78 @@ index 9fef06c6..f460221e 100644
  void sh7042_device::internal_update()
  {
  	internal_update(current_cycles());
+@@ -411,7 +425,7 @@ u16 sh7042_device::pcf_ah_r()
+ void sh7042_device::pcf_ah_w(offs_t, u16 data, u16 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_ah);
+-	logerror("pcf ah = %04x\n", m_pcf_ah);
++	//logerror("pcf ah = %04x\n", m_pcf_ah);
+ }
+ 
+ u32 sh7042_device::pcf_al_r()
+@@ -422,7 +436,7 @@ u32 sh7042_device::pcf_al_r()
+ void sh7042_device::pcf_al_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_al);
+-	logerror("pcf al = %08x\n", m_pcf_al);
++	//logerror("pcf al = %08x\n", m_pcf_al);
+ }
+ 
+ u32 sh7042_device::pcf_b_r()
+@@ -433,7 +447,7 @@ u32 sh7042_device::pcf_b_r()
+ void sh7042_device::pcf_b_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_b);
+-	logerror("pcf b = %08x\n", m_pcf_b);
++	//logerror("pcf b = %08x\n", m_pcf_b);
+ }
+ 
+ u16 sh7042_device::pcf_c_r()
+@@ -444,7 +458,7 @@ u16 sh7042_device::pcf_c_r()
+ void sh7042_device::pcf_c_w(offs_t, u16 data, u16 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_c);
+-	logerror("pcf c = %04x\n", m_pcf_c);
++	//logerror("pcf c = %04x\n", m_pcf_c);
+ }
+ 
+ u32 sh7042_device::pcf_dh_r()
+@@ -455,7 +469,7 @@ u32 sh7042_device::pcf_dh_r()
+ void sh7042_device::pcf_dh_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_dh);
+-	logerror("pcf dh = %08x\n", m_pcf_dh);
++	//logerror("pcf dh = %08x\n", m_pcf_dh);
+ }
+ 
+ u16 sh7042_device::pcf_dl_r()
+@@ -466,7 +480,7 @@ u16 sh7042_device::pcf_dl_r()
+ void sh7042_device::pcf_dl_w(offs_t, u16 data, u16 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_dl);
+-	logerror("pcf dl = %04x\n", m_pcf_dl);
++	//logerror("pcf dl = %04x\n", m_pcf_dl);
+ }
+ 
+ u32 sh7042_device::pcf_e_r()
+@@ -477,7 +491,7 @@ u32 sh7042_device::pcf_e_r()
+ void sh7042_device::pcf_e_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_e);
+-	logerror("pcf e = %08x\n", m_pcf_e);
++	//logerror("pcf e = %08x\n", m_pcf_e);
+ }
+ 
+ u16 sh7042_device::pcf_if_r()
+@@ -488,7 +502,7 @@ u16 sh7042_device::pcf_if_r()
+ void sh7042_device::pcf_if_w(offs_t, u16 data, u16 mem_mask)
+ {
+ 	COMBINE_DATA(&m_pcf_if);
+-	logerror("pcf if = %04x\n", m_pcf_if);
++	//logerror("pcf if = %04x\n", m_pcf_if);
+ }
+ 
+ void sh7042_device::set_internal_interrupt(int level, u32 vector)
 diff --git a/src/devices/cpu/sh/sh7042.h b/src/devices/cpu/sh/sh7042.h
 index dbe2b32f..e2395195 100644
 --- a/src/devices/cpu/sh/sh7042.h
@@ -45,7 +117,7 @@ index dbe2b32f..e2395195 100644
  	u16 do_read_port16(int port) { return m_read_port16[port](); }
  	void do_write_port16(int port, u16 data, u16 ddr) { m_write_port16[port](0, data, ddr); }
 diff --git a/src/devices/cpu/sh/sh_dmac.cpp b/src/devices/cpu/sh/sh_dmac.cpp
-index 39775445..d34880fa 100644
+index 39775445..bb078d50 100644
 --- a/src/devices/cpu/sh/sh_dmac.cpp
 +++ b/src/devices/cpu/sh/sh_dmac.cpp
 @@ -33,7 +33,6 @@ void sh_dmac_device::device_reset()
@@ -68,7 +140,49 @@ index 39775445..d34880fa 100644
  }
  
  sh_dmac_channel_device::sh_dmac_channel_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
-@@ -104,7 +108,6 @@ void sh_dmac_channel_device::dmatcr_w(offs_t, u32 data, u32 mem_mask)
+@@ -68,48 +72,84 @@ void sh_dmac_channel_device::device_reset()
+ 
+ u32 sh_dmac_channel_device::sar_r()
+ {
+-	logerror("sar_r\n");
++	//logerror("sar_r\n");
+ 	return m_sar;
+ }
+ 
+ void sh_dmac_channel_device::sar_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_sar);
+-	logerror("sar_w %08x\n", m_sar);
++	//logerror("sar_w %08x\n", m_sar);
+ }
+ 
+ u32 sh_dmac_channel_device::dar_r()
+ {
+-	logerror("dar_r\n");
++	//logerror("dar_r\n");
+ 	return m_dar;
+ }
+ 
+ void sh_dmac_channel_device::dar_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_dar);
+-	logerror("dar_w %08x\n", m_dar);
++	//logerror("dar_w %08x\n", m_dar);
+ }
+ 
+ u32 sh_dmac_channel_device::dmatcr_r()
+ {
+-	logerror("dmatcr_r\n");
++	//logerror("dmatcr_r\n");
+ 	return m_dmatcr;
+ }
+ 
+ void sh_dmac_channel_device::dmatcr_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_dmatcr);
+-	logerror("dmatcr_w %08x\n", m_dmatcr);
++	//logerror("dmatcr_w %08x\n", m_dmatcr);
+ }
  
  u32 sh_dmac_channel_device::chcr_r()
  {
@@ -76,10 +190,11 @@ index 39775445..d34880fa 100644
  	return m_chcr;
  }
  
-@@ -112,4 +115,41 @@ void sh_dmac_channel_device::chcr_w(offs_t, u32 data, u32 mem_mask)
+ void sh_dmac_channel_device::chcr_w(offs_t, u32 data, u32 mem_mask)
  {
  	COMBINE_DATA(&m_chcr);
- 	logerror("chcr_w %08x\n", m_chcr);
+-	logerror("chcr_w %08x\n", m_chcr);
++	//logerror("chcr_w %08x\n", m_chcr);
 +	check_start();
 +}
 +
