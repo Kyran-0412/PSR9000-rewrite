@@ -492,7 +492,7 @@ static void draw_screen(int op, int oc, int ov)
 			rrect(36, y + 6, 56, y + 19, 6, 1, WT);
 		} else {
 			rrect(30, y, W - 31, y + 26, 7, 1, WT);   /* solid panel so the text reads */
-			dashed_box(30, y, W - 31, y + 26);
+			rrect2(30, y, W - 31, y + 26, 7, K);      /* solid outline: separate from the dots */
 			fg = K;
 			rrect2(36, y + 6, 56, y + 19, 6, K);
 		}

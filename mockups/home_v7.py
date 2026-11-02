@@ -97,7 +97,7 @@ for i, P in enumerate(parts):
     if on:
         d.rounded_rectangle(box, 7, fill=K); fg = Wt
     else:
-        d.rounded_rectangle(box, 7, fill=Wt); dashed_box(box); fg = K
+        d.rounded_rectangle(box, 7, fill=Wt, outline=K, width=2); fg = K
     d.rounded_rectangle((36, y + 6, 56, y + 19), 6, fill=Wt if on else None, outline=K if not on else None, width=2)
     t((46, y + 13), P['p'], f_tiny, K, 'mm')
     t((64, y + 13), P['name'], f_name if on else f_reg, fg, 'lm')
