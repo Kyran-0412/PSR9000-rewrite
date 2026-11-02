@@ -62,7 +62,7 @@ public:
 	void init_psr9000() ATTR_COLD;
 
 private:
-	required_device<sh7043_device> m_maincpu;
+	required_device<sh7043a_device> m_maincpu;
 	required_device<sed1330_device> m_lcdc;
 	required_device<hd63266f_device> m_fdc;
 	required_device<intelfsh16_device> m_dataflash, m_styleflash;
@@ -71,7 +71,17 @@ private:
 	required_region_ptr<u8> m_subrom;
 	required_region_ptr<u16> m_styrom;
 	u16 m_pe = 0;
-	u8 m_uart_irq = 0;               // interrupt outputs of the 4 UART channels (bit n = channel n)
+	u8 m_uart_irq = 0;
+	// IRQ0 is shared: port F bit7 = FDC, bit6 = SCSI (both active low), port E bit15 = IDE (0x125580)
+	bool m_fdc_irq = false, m_scsi_irq = false;
+	u8 m_scsi[32] = {};              // simulated SCSI controller registers (0xa80000 + 4*r + 3)
+	emu_timer *m_scsi_timer = nullptr;
+	TIMER_CALLBACK_MEMBER(scsi_timeout);
+	void update_irq0();
+	void fdc_irq_w(int state) { m_fdc_irq = state; update_irq0(); }
+	u16 pf_r() { return 0xff3f | (m_fdc_irq ? 0 : 0x80) | (m_scsi_irq ? 0 : 0x40); }
+	u8 scsi_r(offs_t offset);
+	void scsi_w(offs_t offset, u8 data);               // interrupt outputs of the 4 UART channels (bit n = channel n)
 	template <int Ch> void uart_irq_w(int state);
 
 	// Main <-> sub link ("PIF32" in the gate array). The sub side is simulated.
@@ -87,7 +97,7 @@ private:
 	void link_main_w(u32 data);
 	void sub_reply(u32 data);
 	void sub_message(const std::vector<u32> &msg);
-	u16 pe_r() { return m_pe; }
+	u16 pe_r() { return m_pe | 0x8000; } // bit15 = IDE interrupt (active low): none
 	void pe_w(u16 data) { m_pe = data; }
 	u16 style_r(offs_t offset);
 	void style_w(offs_t offset, u16 data);
@@ -134,9 +144,17 @@ void psr9000_state::init_psr9000()
 
 void psr9000_state::machine_start()
 {
+	m_scsi_timer = timer_alloc(FUNC(psr9000_state::scsi_timeout), this);
+	// NOTE reg 11 low 3 bits = SCSI bus phase (0x31D7DC). The early probe loop (0x31E14E, called
+	// from 0x315BE8 before the driver's state 0x12BB1C4 is set by 0x31E978) only ends on phase 1
+	// (but then the driver assumes a device and sends INQUIRY) or a completed selection timeout
+	// (which the interrupt handler ignores while that state is 0). Still unsolved.
 	save_item(NAME(m_pe));
 	save_item(NAME(m_last_to_main));
 	save_item(NAME(m_uart_irq));
+	save_item(NAME(m_fdc_irq));
+	save_item(NAME(m_scsi_irq));
+	save_item(NAME(m_scsi));
 }
 
 // Main CPU port A: bit0 = 1 when it may send to the sub CPU (0x253884),
@@ -261,6 +279,45 @@ void psr9000_state::style_w(offs_t offset, u16 data)
 		m_styleflash->write(offset, data);
 }
 
+void psr9000_state::update_irq0()
+{
+	m_maincpu->set_input_line(0, (m_fdc_irq || m_scsi_irq) ? ASSERT_LINE : CLEAR_LINE);
+}
+
+// SCSI controller (SPC7212, register r at 0xa80000 + 4*r + 3). Not emulated: it behaves like a
+// bus with no devices. Starting a command (write to reg 20, see 0x31E0EC) ends in a selection
+// timeout: status reg 0 bit4 (error) + reg 1 bit5, as checked at 0x31E042 -> -0x251.
+// The interrupt handler (0x31D89C) reads reg 0 and writes it back to acknowledge.
+u8 psr9000_state::scsi_r(offs_t offset)
+{
+	return m_scsi[offset & 31];
+}
+
+void psr9000_state::scsi_w(offs_t offset, u8 data)
+{
+	offset &= 31;
+	if(offset == 0) {
+		// acknowledge: written bits are cleared
+		m_scsi[0] &= ~data;
+		if(!(m_scsi[0] & 0x18)) {
+			m_scsi_irq = false;
+			update_irq0();
+		}
+		return;
+	}
+	m_scsi[offset] = data;
+	if(offset == 20) // the real selection timeout takes ~250ms; the driver arms its state after this write
+		m_scsi_timer->adjust(attotime::from_msec(250));
+}
+
+TIMER_CALLBACK_MEMBER(psr9000_state::scsi_timeout)
+{
+	m_scsi[0] |= 0x10;
+	m_scsi[1] = 0x20;
+	m_scsi_irq = true;
+	update_irq0();
+}
+
 // Quad UART interrupts: 0x9800A3 reads which channels are interrupting (IRQ2 handler 0x1255FA:
 // bit0 -> 0x8A3C8, bit1 -> 0x8A3C2, bit3 -> 0x8AE88). All of them drive main IRQ2.
 template <int Ch> void psr9000_state::uart_irq_w(int state)
@@ -307,6 +364,8 @@ void psr9000_state::map(address_map &map)
 	// 0xa00000: 32-bit data port to/from the sub CPU ("PIF32"), send 0x2538E0, receive 0x253948.
 	// Status on port A: bit0 = may send (wait for 1), bit1 = 0 when a word is waiting (0x253884/0x2538B2).
 	map(0x00a00000, 0x00a00003).rw(FUNC(psr9000_state::link_main_r), FUNC(psr9000_state::link_main_w));
+	// 0xa80000-0xa8007f: SCSI controller, simulated as an empty bus
+	map(0x00a80000, 0x00a8007f).rw(FUNC(psr9000_state::scsi_r), FUNC(psr9000_state::scsi_w)).umask32(0x000000ff);
 	// 0xe80000-3: bit-banged serial lines (clock/data), written at 0x1258D8-0x125988. Unknown target.
 	// 0xe00000/1: MSM82C51A USART (TO HOST), reset sequence 00 00 00 40 5D 14 at 0x246370. Not hooked up yet.
 	// DRAM area
@@ -329,11 +388,12 @@ INPUT_PORTS_END
 
 void psr9000_state::psr9000(machine_config &config)
 {
-	SH7043(config, m_maincpu, 7_MHz_XTAL * 4); // clock not verified
+	SH7043A(config, m_maincpu, 7_MHz_XTAL * 4); // HD6437043AE00F ("A" die: 2x A/D at 0xffff8400); clock not verified
 	m_maincpu->set_addrmap(AS_PROGRAM, &psr9000_state::map);
 	m_maincpu->read_porta().set(FUNC(psr9000_state::pa_r));
 	m_maincpu->write_porta().set(FUNC(psr9000_state::pa_w));
 	m_maincpu->read_porte().set(FUNC(psr9000_state::pe_r));
+	m_maincpu->read_portf().set(FUNC(psr9000_state::pf_r));
 	m_maincpu->write_porte().set(FUNC(psr9000_state::pe_w));
 
 	auto &palette = PALETTE(config, "palette", FUNC(psr9000_state::palette_init), 2);
@@ -362,6 +422,7 @@ void psr9000_state::psr9000(machine_config &config)
 	m_uart[3]->out_int_callback().set(FUNC(psr9000_state::uart_irq_w<3>));
 
 	HD63266F(config, m_fdc, 16_MHz_XTAL); // clock not verified
+	m_fdc->intrq_wr_callback().set(FUNC(psr9000_state::fdc_irq_w));
 	FLOPPY_CONNECTOR(config, "fdc:0", psr9000_floppies, "35hd", floppy_image_device::default_pc_floppy_formats);
 
 	SPEAKER(config, "speaker", 2).front();

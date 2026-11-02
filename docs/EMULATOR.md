@@ -115,9 +115,28 @@ flash. The firmware may complain about missing styles; we fake what is needed.
    89 read -> 8A 00 00 value, A4 -> A5010000 FFFFFFFF, BE/BF/C0 block transfer ignored.
    No unhandled commands during boot; ~1500 messages; emulation runs ~7x real time.
    Quad UART interrupts wired (0x9800A3 = per-channel interrupt bits, main IRQ2).
+3c. More hardware found and wired (2026-11):
+   - main CPU is the SH7043A ("A" die): its 2 A/D converters at 0xFFFF8400-13 are now mapped
+     (the firmware polls channels 0-4: pedals/wheels; inputs return 0 for now).
+   - IRQ0 is shared: port F bit7 = FDC, bit6 = SCSI, port E bit15 = IDE (all active low),
+     handler 0x125580. FDC interrupt now connected.
+   - 0xA80000 = SCSI controller (SPC7212), register r at +4r+3: r0 interrupt status (bit4 error,
+     bit3 ?, bit5 busy), r1 error detail (bit5 selection timeout), r11 low 3 bits bus phase,
+     r17-r20 control/target/command (r20 = start, 0x0A = select). Driver code 0x31xxxx,
+     interrupt handler 0x31D89C, SCSI lock = OS semaphore 19.
+   - OS calls (trapa #63, r0): FEE8 take semaphore, FEE9 release, FEEC wait for message,
+     FEF1 sleep, FEF2 ?, FEEE ?. Logged with mame/sys.lua (Lua breakpoints, needs -debug).
+   - CURRENT BLOCKER: the boot waits for the SCSI lock, held by a task stuck probing the SCSI
+     bus (loop 0x31E14E in 0x315BE8). A fake "selection timeout" interrupt is delivered but
+     ignored because the driver is not set up yet at that point; answering "bus phase 1" makes
+     it think a device exists. Needs a closer look at the SPC7212 behaviour, or an
+     emulator-only shortcut that skips the probe.
 4. NEXT: front panel controller (MN101C027, internal mask ROM, so simulate it too). It talks to
    the main CPU on UART channel 3 (31250 baud, 8N2). Main sends 5-byte packets at boot:
    E0 0F 0F 05 08, F0 0F 0F 05 08, then 80..8x 00 00 00 00 (LED/lamp data?). The boot now idles,
-   probably waiting for panel replies. The same link carries buttons and the dial, so this is
-   also the input milestone.
+   (not needed for boot as far as seen). Protocol from the main CPU's parser (0x8A7FE/0x8A748):
+   panel -> main packets are 3 bytes: 80 rr cc = button (row rr&31, column cc&15, cc bit6 =
+   pressed; button id = table 0x337514[row*10+col]); D0 hi lo / D8 hi lo = dial +/- (hi*16+lo).
+   Service manual: panel CPU MN101C027 scans the switch matrix, drives LEDs, reads the rotary
+   encoder (EC201 "TEMPO, DATA") and talks "MIDI" serial to the main board (UART ch3).
 5. Sound (SWP30 is emulated in MAME, but the wave and voice-parameter ROMs are not dumped).
