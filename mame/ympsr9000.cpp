@@ -24,6 +24,7 @@
 
 #include "bus/midi/midi.h"
 #include "cpu/sh/sh7042.h"
+#include "cpu/sh/sh_dmac.h"
 #include "imagedev/floppy.h"
 #include "machine/ins8250.h"
 #include "machine/intelfsh.h"
@@ -105,6 +106,12 @@ private:
 	TIMER_CALLBACK_MEMBER(lcd_pulse);
 	void update_irq0();
 	void fdc_irq_w(int state) { m_fdc_irq = state; update_irq0(); }
+	// Floppy data goes through DMA channel 0 (external request, FDC data register -> RAM);
+	// the end of the count is the controller's TC.
+	sh_dmac_channel_device *m_fdc_dma = nullptr;
+	floppy_connector *m_floppy = nullptr;
+	bool m_fdc_drq = false;
+	void fdc_drq_w(int state) { m_fdc_drq = state; if(m_fdc_dma) m_fdc_dma->dreq_w(state); }
 	u16 pf_r() { return 0xff3f | (m_fdc_irq ? 0 : 0x80) | (m_scsi_irq ? 0 : 0x40); }
 	u8 scsi_r(offs_t offset);
 	void scsi_w(offs_t offset, u8 data);               // interrupt outputs of the 4 UART channels (bit n = channel n)
@@ -196,6 +203,12 @@ void psr9000_state::machine_start()
 	set_data_frame(1, 8, PARITY_NONE, STOP_BITS_2);
 	set_rate(31250);
 	m_uart[3]->rx_w(1);
+	m_floppy = subdevice<floppy_connector>("fdc:0");
+	m_fdc_dma = m_maincpu->subdevice<sh_dmac_channel_device>("dmac:0");
+	if(m_fdc_dma)
+		m_fdc_dma->set_tend_handler([this]() { m_fdc->tc_w(1); m_fdc->tc_w(0); });
+	else
+		logerror("DMA channel 0 not found: floppy reads will fail\n");
 	m_uart[0]->rx_w(1);   // MIDI A/B inputs idle until a -midiin port drives them
 	m_uart[1]->rx_w(1);
 	m_dial_timer = timer_alloc(FUNC(psr9000_state::dial_poll), this);
@@ -235,6 +248,11 @@ void psr9000_state::machine_reset()
 	m_to_main.clear();
 	m_msg.clear();
 	m_msg_left = 0;
+	// Data rate: 500 kbit/s = 1.44 MB HD disks. The real board selects the rate with a pin
+	// (not traced yet); at the controller's default 250 kbit/s every READ ID on an HD disk
+	// fails (ST1 = missing address mark) and the keyboard shows "Unformatted disk".
+	// 720 KB DD disks would need 250 kbit/s.
+	m_fdc->rate_w(1);
 }
 
 u32 psr9000_state::link_main_r()
@@ -405,6 +423,9 @@ INPUT_CHANGED_MEMBER(psr9000_state::panel_button)
 // Dial packet: D0 = +n, D8 = -n, n = hi * 16 + lo
 TIMER_CALLBACK_MEMBER(psr9000_state::dial_poll)
 {
+	floppy_image_device *fl = m_floppy ? m_floppy->get_device() : nullptr;
+	m_fdc->ready_w(!(fl && fl->exists()));   // true = not ready
+
 	u8 cur = m_dial->read();
 	s8 delta = s8(cur - m_dial_last);
 	m_dial_last = cur;
@@ -475,6 +496,9 @@ void psr9000_state::map(address_map &map)
 	map(0x00c80001, 0x00c80001).rw(m_lcdc, FUNC(sed1330_device::data_r), FUNC(sed1330_device::command_w));
 	// 0xc00000-2: HD63266F FDC (msr / fifo / extstat). Status poll loop at 0x317786.
 	map(0x00c00000, 0x00c00003).m(m_fdc, FUNC(hd63266f_device::map));
+	// DMA reads of the data register: on the board the DMA acknowledge makes the controller
+	// hand over its data byte; MAME's model only does that through dma_r().
+	map(0x00c00000, 0x00c00003).lr8(NAME([this](offs_t) { return m_fdc_drq ? m_fdc->dma_r() : m_fdc->fifo_r(); })).umask32(0x00ff0000);
 	// 0x980000-0x98007f: quad 16550-style UART, channel n at +0x20*n, register r at +4*r+3.
 	// Init at 0x125BFE (DLAB, divisor 20 = 31250 baud with a 10 MHz clock -> MIDI).
 	for(int ch = 0; ch < 4; ch++)
@@ -732,6 +756,12 @@ void psr9000_state::psr9000(machine_config &config)
 
 	HD63266F(config, m_fdc, 16_MHz_XTAL); // clock not verified
 	m_fdc->intrq_wr_callback().set(FUNC(psr9000_state::fdc_irq_w));
+	// With the drive's own ready signal, the boot-time RECALIBRATE runs while the motor is still
+	// spinning up, the drive reports "not ready" (ST0 0x68) and the firmware treats the floppy
+	// drive as absent (empty DEVICE list on the disk pages). So "ready" is driven from the
+	// driver instead: ready while a disk is inserted (updated every 10 ms in dial_poll).
+	m_fdc->set_ready_line_connected(false);   // ready = disk present, see dial_poll
+	m_fdc->drq_wr_callback().set(FUNC(psr9000_state::fdc_drq_w));
 	FLOPPY_CONNECTOR(config, "fdc:0", psr9000_floppies, "35hd", floppy_image_device::default_pc_floppy_formats);
 
 	SPEAKER(config, "speaker", 2).front();

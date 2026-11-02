@@ -194,3 +194,25 @@ firmware sends active sensing (FE) every 200 ms on both ports, and a voice chang
 select / program change / controllers plus XG SysEx (F0 43 10 4C ...). What else is sent follows
 the firmware's FUNCTION > MIDI transmit settings (template "All Parts" includes the style parts
 RHY1..PHR2). Windows: `START_PSR9000_MIDI.bat`, `LIST_MIDI_PORTS.bat`; VST route via loopMIDI.
+
+## Floppy drive (2026-11, work in progress)
+Goal: load style files (.sty) the way the keyboard does (STYLE > STYLE MANAGER [LCD 8] >
+LOAD STYLE INTO FLASH ROM [LCD A]). `tools/make_floppy.py out.img files...` builds a 1.44 MB
+FAT12 image; mount with `-flop out.img`. Style files live in `firmware/styles/` (git-ignored).
+Fixed so far:
+- READY: the boot RECALIBRATE ran while the motor spun up -> ST0 0x68 (not ready) -> firmware
+  treated the drive as absent (empty DEVICE list). Ready is now driven by the driver: ready
+  while a disk is inserted (`ready_w`, polled every 10 ms). No disk still boots normally.
+- DATA RATE: forced 500 kbit/s (HD). At 250 kbit/s every READ ID failed (ST1 0x05).
+- DMA: the FDC uses SH7043 DMA channel 0, external request, dual address, byte, edge DREQ
+  (CHCR 0x00014041, SAR 0xC00001 -> RAM, 0x200 bytes). Added DREQ support to the core DMAC
+  patch (`sh_dmac_channel_device::dreq_w`, end of count -> callback, wired to the FDC's TC).
+  MAME's FDC model only hands out DMA data through `dma_r()`, so the driver reads the data
+  register through `dma_r()` while DRQ is up.
+Result: the drive shows as "FD", sectors read correctly (verified in RAM), and the file system
+library (error names FIL_B_ERR_*, table 0xA8778) mounts the disk: FAT bytes checked at
+0x316BA0, boot sector compared with its templates at 0x3D50AC ("EMI-DOS" 1.44 MB / 720 KB
+layouts, 13 bytes from offset 0x0B, compare 0x31FDF0) and the mount returns OK. It then mounts
+again twice more and the page still shows "Unformatted disk". Not found yet. Tried without
+effect: ST3 bit 3 (INP pin) and the HD63266F extended status bits. Next: follow what runs
+after the mount (0x314A42 -> 0x305xxx/0x306xxx file layer) to see why it remounts.
