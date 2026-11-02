@@ -19,3 +19,4 @@ mod/*/build/*
 !mod/*/build/apply.lua
 cfg/
 error.log
+snap/
