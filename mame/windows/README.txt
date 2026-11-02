@@ -48,3 +48,23 @@ New home panel (test version)
   the mod is applied in memory from mod\apply.lua.
 - BRIGHT always reads 0 in the emulator (the faked sound board cannot report it); on
   the real keyboard it shows the actual value.
+
+MIDI (hear what the emulated keyboard plays)
+- The emulated PSR-9000 sends real MIDI out of its MIDI A port, exactly like the keyboard.
+  There is no PSR sound in the emulator (the sound chips' samples are not available), but
+  you can send that MIDI to a synth on the PC.
+- Simple test: START_PSR9000_MIDI.bat sends MIDI A to "Microsoft GS Wavetable Synth"
+  (Windows' built-in General MIDI synth).
+- LIST_MIDI_PORTS.bat shows the port names on your PC. Edit the MIDIOUT / MIDIIN lines in
+  START_PSR9000_MIDI.bat to pick others. MIDIIN lets a USB MIDI keyboard play the emulated PSR.
+- VST synths (Keyscape, etc.):
+    1. Install loopMIDI (free, Tobias Erichsen) and create a port, e.g. "loopMIDI Port".
+    2. Set MIDIOUT=loopMIDI Port in START_PSR9000_MIDI.bat.
+    3. In Keyscape standalone (or a DAW / VST host such as Reaper or Cantabile), choose
+       "loopMIDI Port" as the MIDI input. In a DAW you can send each MIDI channel to a
+       different instrument (R1 to Keyscape, drums to a drum VST, ...).
+- What is sent depends on the keyboard's own MIDI settings (FUNCTION > MIDI): the template
+  "All Parts" also sends the style parts (drums, bass, chords...). Styles only play once style
+  files can be loaded into the emulator (not yet: the preset styles are on a ROM chip).
+- The real keyboard can do the same today without any mod: MIDI OUT -> USB MIDI interface ->
+  PC running Keyscape.

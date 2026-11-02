@@ -35,6 +35,9 @@ rewrite from scratch.
 - Clickable panel layout modelled on the real keyboard, data dial, LCD in the real colours.
 - Windows build (`psr9000.exe`) with start scripts; the LCD is shown pixel-exact
   (whole-number zoom).
+- MIDI A/B ports connected to the PC: the emulated keyboard's MIDI OUT can play a Windows synth
+  or, through a virtual MIDI cable (loopMIDI), VST instruments such as Keyscape; MIDI IN takes a
+  USB MIDI keyboard.
 - Not emulated: sound and the sound board (faked), and the voice/style ROM chips, whose
   contents are not public. So there is no audio, and the voice/style lists are empty.
 - Details: [docs/EMULATOR.md](docs/EMULATOR.md).

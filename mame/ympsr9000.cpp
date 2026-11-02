@@ -22,6 +22,7 @@
 
 #include "emu.h"
 
+#include "bus/midi/midi.h"
 #include "cpu/sh/sh7042.h"
 #include "imagedev/floppy.h"
 #include "machine/ins8250.h"
@@ -195,6 +196,8 @@ void psr9000_state::machine_start()
 	set_data_frame(1, 8, PARITY_NONE, STOP_BITS_2);
 	set_rate(31250);
 	m_uart[3]->rx_w(1);
+	m_uart[0]->rx_w(1);   // MIDI A/B inputs idle until a -midiin port drives them
+	m_uart[1]->rx_w(1);
 	m_dial_timer = timer_alloc(FUNC(psr9000_state::dial_poll), this);
 	m_dial_timer->adjust(attotime::from_msec(10), 0, attotime::from_msec(10));
 	m_lcd_timer->adjust(attotime::from_usec(64), 0, attotime::from_usec(64));
@@ -715,6 +718,17 @@ void psr9000_state::psr9000(machine_config &config)
 	m_uart[2]->out_int_callback().set(FUNC(psr9000_state::uart_irq_w<2>));
 	m_uart[3]->out_int_callback().set(FUNC(psr9000_state::uart_irq_w<3>));
 	m_uart[3]->out_tx_callback().set(FUNC(psr9000_state::panel_rx_w));
+
+	// MIDI A / B (UART channels 0 / 1). With MAME's -midiout / -midiin options these connect to
+	// the PC's MIDI ports (e.g. "Microsoft GS Wavetable Synth", or loopMIDI -> a VST host).
+	// The firmware's MIDI transmit settings (Function > MIDI, template "All Parts") decide
+	// what is sent: keyboard parts, style parts, song.
+	MIDI_PORT(config, "mdin_a", midiin_slot, "midiin").rxd_handler().set(m_uart[0], FUNC(ns16550_device::rx_w));
+	MIDI_PORT(config, "mdin_b", midiin_slot, "midiin").rxd_handler().set(m_uart[1], FUNC(ns16550_device::rx_w));
+	MIDI_PORT(config, "mdout_a", midiout_slot, "midiout");
+	MIDI_PORT(config, "mdout_b", midiout_slot, "midiout");
+	m_uart[0]->out_tx_callback().set("mdout_a", FUNC(midi_port_device::write_txd));
+	m_uart[1]->out_tx_callback().set("mdout_b", FUNC(midi_port_device::write_txd));
 
 	HD63266F(config, m_fdc, 16_MHz_XTAL); // clock not verified
 	m_fdc->intrq_wr_callback().set(FUNC(psr9000_state::fdc_irq_w));

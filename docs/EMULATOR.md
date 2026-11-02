@@ -185,3 +185,12 @@ flash. The firmware may complain about missing styles; we fake what is needed.
    Test helpers: mame/press.lua (PRESS="t:ROWn:NAME;..."), mame/dial.lua, mame/bp.lua.
    Lua note: manager.machine.time.seconds is whole seconds only; use time:as_double().
 5. Sound (SWP30 is emulated in MAME, but the wave and voice-parameter ROMs are not dumped).
+
+## MIDI A / B (2026-11)
+Quad UART channels 0 and 1 are MIDI A and B (31250 baud). They are wired to MAME MIDI ports:
+media `midiin1`/`midiin2` and `midiout1`/`midiout2` (e.g. `-midiout1 "Microsoft GS Wavetable Synth"`,
+`-listmidi` lists the PC's ports). Verified with a write tap on the UART transmit register: the
+firmware sends active sensing (FE) every 200 ms on both ports, and a voice change sends bank
+select / program change / controllers plus XG SysEx (F0 43 10 4C ...). What else is sent follows
+the firmware's FUNCTION > MIDI transmit settings (template "All Parts" includes the style parts
+RHY1..PHR2). Windows: `START_PSR9000_MIDI.bat`, `LIST_MIDI_PORTS.bat`; VST route via loopMIDI.
