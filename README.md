@@ -105,5 +105,20 @@ change, capture again in the emulator.
 2. Copy Yamaha's five V3.06 files into `roms\psr9000`.
 3. Start `START_PSR9000_NEW_HOME.bat` for the modded firmware, or `START_PSR9000.bat` for stock.
 
+### Styles (optional)
+The preset styles are on a ROM chip that is not available, so the emulator starts with no
+styles. Style files (`.sty`) for the PSR-9000 can be downloaded, for example the PSR-9000 preset
+and flash set on psrtutorial.com. They are Yamaha's, so they are not in this repository.
+1. Put the `.sty` files on emulated floppy disks (1.44 MB each, about 70 styles or 1.4 MB per
+   disk; needs Python 3):
+   `python tools/make_floppy.py styles\8BEAT.img path\to\8beat\*.sty`
+2. Set `FLOPPY=styles\8BEAT.img` in the start file, or in the emulator press Tab > File
+   Manager > floppydisk and pick the image.
+3. On the emulated keyboard: press a STYLE button > STYLE MANAGER (LCD 8) > LOAD STYLE INTO
+   FLASH ROM (LCD A); LCD C selects ALL; [NEXT], pick the location, [NEXT], YES (LCD G).
+   The styles appear under the FLASH STYLE buttons and stay there. The flash holds about
+   2 MB, like the real keyboard.
+Styles play, but sound only comes out through MIDI OUT (see `mame/windows/README.txt`).
+
 To rebuild the mod: `python3 mod/home/build.py` (needs `sh4-linux-gnu-gcc`, Python 3, Pillow
 and the Yamaha files in `firmware/`).
