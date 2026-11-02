@@ -64,7 +64,20 @@ MIDI (hear what the emulated keyboard plays)
        "loopMIDI Port" as the MIDI input. In a DAW you can send each MIDI channel to a
        different instrument (R1 to Keyscape, drums to a drum VST, ...).
 - What is sent depends on the keyboard's own MIDI settings (FUNCTION > MIDI): the template
-  "All Parts" also sends the style parts (drums, bass, chords...). Styles only play once style
-  files can be loaded into the emulator (not yet: the preset styles are on a ROM chip).
+  "All Parts" also sends the style parts (drums, bass, chords...).
 - The real keyboard can do the same today without any mod: MIDI OUT -> USB MIDI interface ->
   PC running Keyscape.
+
+Floppy disks and styles
+- The floppy drive works: the "styles" folder has disk images (one per style category).
+- Put a disk in: set FLOPPY=styles\8BEAT.img in the .bat file, or while running press Tab >
+  File Manager > floppydisk and pick the .img file (change disks the same way).
+- Load styles like on the keyboard: press a STYLE button > STYLE MANAGER (LCD 8) >
+  LOAD STYLE INTO FLASH ROM (LCD A). LCD C switches SINGLE / MULTI / ALL (ALL = whole disk),
+  then [NEXT], pick the Flash location, [NEXT], YES (LCD G). The styles then appear under the
+  FLASH STYLE buttons and stay there (saved in the nvram folder).
+- The style flash holds about 2 MB, like the real keyboard: a few categories, not all at once.
+- Styles play (START/STOP) and their notes come out of MIDI OUT (see the MIDI section), but
+  there is still no sound inside the emulator.
+- Make your own disk images from .sty files: python tools/make_floppy.py out.img *.sty
+  (in the GitHub repository).

@@ -1,0 +1,13 @@
+diff --git a/src/devices/machine/upd765.cpp b/src/devices/machine/upd765.cpp
+index 49d12eb5..ae365439 100644
+--- a/src/devices/machine/upd765.cpp
++++ b/src/devices/machine/upd765.cpp
+@@ -3734,7 +3734,7 @@ void hd63266f_device::start_command(int cmd)
+ 	// execute the command immediately if there's no motor on delay.  The delay is counted
+ 	// in index pulses, and a drive holding no disk never gives any, so a drive that reports
+ 	// itself not ready has to be let through to fail on its own.
+-	if(motor_on_counter == 0 || !get_ready(command[1] & 3)) {
++	if(motor_on_counter == 0 || !get_ready(command[1] & 3) || !flopi[command[1] & 3].dev || !flopi[command[1] & 3].dev->exists()) {
+ 		motor_on_counter = 0;
+ 		upd765_family_device::start_command(cmd);
+ 	} else

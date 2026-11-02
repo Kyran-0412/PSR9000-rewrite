@@ -35,11 +35,14 @@ rewrite from scratch.
 - Clickable panel layout modelled on the real keyboard, data dial, LCD in the real colours.
 - Windows build (`psr9000.exe`) with start scripts; the LCD is shown pixel-exact
   (whole-number zoom).
+- Floppy drive: style files (.sty) load from disk images into the style flash, exactly like
+  on the keyboard (Style Manager), and play; `tools/make_floppy.py` builds the disk images.
 - MIDI A/B ports connected to the PC: the emulated keyboard's MIDI OUT can play a Windows synth
   or, through a virtual MIDI cable (loopMIDI), VST instruments such as Keyscape; MIDI IN takes a
   USB MIDI keyboard.
-- Not emulated: sound and the sound board (faked), and the voice/style ROM chips, whose
-  contents are not public. So there is no audio, and the voice/style lists are empty.
+- Not emulated: sound and the sound board (faked), and the voice/preset-style ROM chips,
+  whose contents are not public. So there is no audio inside the emulator (style and keyboard
+  notes can go out over MIDI), and preset styles only work once loaded from disk.
 - Details: [docs/EMULATOR.md](docs/EMULATOR.md).
 
 ### Firmware mod ([mod/home](mod/home), [docs/HOME_MOD.md](docs/HOME_MOD.md))

@@ -195,24 +195,33 @@ select / program change / controllers plus XG SysEx (F0 43 10 4C ...). What else
 the firmware's FUNCTION > MIDI transmit settings (template "All Parts" includes the style parts
 RHY1..PHR2). Windows: `START_PSR9000_MIDI.bat`, `LIST_MIDI_PORTS.bat`; VST route via loopMIDI.
 
-## Floppy drive (2026-11, work in progress)
-Goal: load style files (.sty) the way the keyboard does (STYLE > STYLE MANAGER [LCD 8] >
-LOAD STYLE INTO FLASH ROM [LCD A]). `tools/make_floppy.py out.img files...` builds a 1.44 MB
-FAT12 image; mount with `-flop out.img`. Style files live in `firmware/styles/` (git-ignored).
-Fixed so far:
-- READY: the boot RECALIBRATE ran while the motor spun up -> ST0 0x68 (not ready) -> firmware
-  treated the drive as absent (empty DEVICE list). Ready is now driven by the driver: ready
-  while a disk is inserted (`ready_w`, polled every 10 ms). No disk still boots normally.
-- DATA RATE: forced 500 kbit/s (HD). At 250 kbit/s every READ ID failed (ST1 0x05).
+## Floppy drive (2026-11, WORKING: styles load from disk images)
+Load styles the way the keyboard does: STYLE > STYLE MANAGER [LCD 8] > LOAD STYLE INTO FLASH ROM
+[LCD A], LCD C = SINGLE/MULTI/ALL, [NEXT], location, [NEXT], YES [LCD G]. Verified: a whole
+disk (30 styles) loads into the style flash, the styles show under FLASH STYLE, persist in
+nvram, and play (START/STOP; notes on MIDI A, e.g. drums on channel 10).
+`tools/make_floppy.py out.img files...` builds a 1.44 MB FAT12 image with long file names;
+mount with `-flop out.img` or swap in MAME's File Manager. Style files and the per-category
+images live in `firmware/styles/` (git-ignored, copyrighted).
+What it took (driver + core patches):
+- READY: the drive is always ready, like the real one (MAME's FDC model otherwise returned
+  "not ready" while the motor spun up, ST0 0x68, and the firmware decided there was no drive).
+  Core patch `upd765_hd63266f_nodisk.diff`: no motor spin-up wait when the drive has no disk
+  (the wait counts index pulses, which an empty drive never gives).
+- DATA RATE: 500 kbit/s (HD). At 250 kbit/s every READ ID failed (ST1 0x05).
 - DMA: the FDC uses SH7043 DMA channel 0, external request, dual address, byte, edge DREQ
-  (CHCR 0x00014041, SAR 0xC00001 -> RAM, 0x200 bytes). Added DREQ support to the core DMAC
-  patch (`sh_dmac_channel_device::dreq_w`, end of count -> callback, wired to the FDC's TC).
+  (CHCR 0x00014041, SAR 0xC00001 -> RAM, 0x200 bytes). Core DMAC patch: DREQ support
+  (`dreq_w`, keeps going while DREQ stays high, end of count -> callback = the FDC's TC).
   MAME's FDC model only hands out DMA data through `dma_r()`, so the driver reads the data
   register through `dma_r()` while DRQ is up.
-Result: the drive shows as "FD", sectors read correctly (verified in RAM), and the file system
-library (error names FIL_B_ERR_*, table 0xA8778) mounts the disk: FAT bytes checked at
-0x316BA0, boot sector compared with its templates at 0x3D50AC ("EMI-DOS" 1.44 MB / 720 KB
-layouts, 13 bytes from offset 0x0B, compare 0x31FDF0) and the mount returns OK. It then mounts
-again twice more and the page still shows "Unformatted disk". Not found yet. Tried without
-effect: ST3 bit 3 (INP pin) and the HD63266F extended status bits. Next: follow what runs
-after the mount (0x314A42 -> 0x305xxx/0x306xxx file layer) to see why it remounts.
+- REGISTER +2 of the HD63266F: a bit set/reset register (write 0xE0|bits set, 0xD0|bits clear,
+  0xFF reset; read = bits, bit 0 motor, bit 6 IRQ, bit 7 = 1 when NO disk). The firmware's
+  controller self-test at boot (0x317638) sets/clears bits 2-3 and reads them back. When it
+  failed, the file system (FIL_B_*, init 0x315BE8) never marked itself initialised
+  (0x11E11B0); the "disk inserted" request then re-ran the init, which clears the "disk ready"
+  flag 0x12BAEC2, and every disk showed "Unformatted disk". The floppy task (0x317EA4) mounts,
+  sets that flag, then polls bit 7 every 100 ticks for removal.
+- File system notes: mount 0x316A4E (seek, FAT sector check 0x316BA0, boot sector compared with
+  templates 0x3D50AC "EMI-DOS" 1.44 MB / 720 KB, 13 bytes from 0x0B), status strings
+  "No Disk / Unformat Disk / UnsupportDisk" 0x348420.
+Not done: 720 KB (DD) disks (would need the 250 kbit/s rate), writing to disk untested.

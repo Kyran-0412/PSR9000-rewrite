@@ -110,6 +110,7 @@ private:
 	// the end of the count is the controller's TC.
 	sh_dmac_channel_device *m_fdc_dma = nullptr;
 	floppy_connector *m_floppy = nullptr;
+	u8 m_fdc_ctrl = 0;   // HD63266F register at +2 (see map)
 	bool m_fdc_drq = false;
 	void fdc_drq_w(int state) { m_fdc_drq = state; if(m_fdc_dma) m_fdc_dma->dreq_w(state); }
 	u16 pf_r() { return 0xff3f | (m_fdc_irq ? 0 : 0x80) | (m_scsi_irq ? 0 : 0x40); }
@@ -222,6 +223,7 @@ void psr9000_state::machine_start()
 	save_item(NAME(m_last_to_main));
 	save_item(NAME(m_uart_irq));
 	save_item(NAME(m_fdc_irq));
+	save_item(NAME(m_fdc_ctrl));
 	save_item(NAME(m_scsi_irq));
 	save_item(NAME(m_scsi));
 }
@@ -253,6 +255,7 @@ void psr9000_state::machine_reset()
 	// fails (ST1 = missing address mark) and the keyboard shows "Unformatted disk".
 	// 720 KB DD disks would need 250 kbit/s.
 	m_fdc->rate_w(1);
+	m_fdc->ready_w(false);   // false = ready
 }
 
 u32 psr9000_state::link_main_r()
@@ -423,8 +426,6 @@ INPUT_CHANGED_MEMBER(psr9000_state::panel_button)
 // Dial packet: D0 = +n, D8 = -n, n = hi * 16 + lo
 TIMER_CALLBACK_MEMBER(psr9000_state::dial_poll)
 {
-	floppy_image_device *fl = m_floppy ? m_floppy->get_device() : nullptr;
-	m_fdc->ready_w(!(fl && fl->exists()));   // true = not ready
 
 	u8 cur = m_dial->read();
 	s8 delta = s8(cur - m_dial_last);
@@ -499,6 +500,29 @@ void psr9000_state::map(address_map &map)
 	// DMA reads of the data register: on the board the DMA acknowledge makes the controller
 	// hand over its data byte; MAME's model only does that through dma_r().
 	map(0x00c00000, 0x00c00003).lr8(NAME([this](offs_t) { return m_fdc_drq ? m_fdc->dma_r() : m_fdc->fifo_r(); })).umask32(0x00ff0000);
+	// +2: bit set/reset register (MAME's model has only a read-only status there). Writes:
+	// 0xE0 | bits = set, 0xD0 | bits = clear (0xFF at reset). Reads give the bits back in the low
+	// nibble (bit 0 = motor on, polled by the floppy task) with the interrupt in bit 6; bit 7 is
+	// read as "disk removed" by the floppy task (0x316E70), so it stays 0 while a disk is in.
+	// The firmware's controller self-test at boot (0x317638) sets and clears bits 2/3 and reads
+	// them back; when it failed, the file system was never marked initialised and a later
+	// re-init wiped the "disk ready" flag, so every disk showed as "Unformatted".
+	map(0x00c00000, 0x00c00003).lrw8(
+			NAME([this](offs_t) {
+				floppy_image_device *fl = m_floppy ? m_floppy->get_device() : nullptr;
+				return u8((m_fdc->extstat_r() & 0x40) | (m_fdc_ctrl & 0x0f) | ((m_fdc->extstat_r() & 1) ? 1 : 0) | ((fl && fl->exists()) ? 0 : 0x80));
+			}),
+			NAME([this](offs_t, u8 data) {
+				if((data & 0xf0) == 0xe0)
+					m_fdc_ctrl |= data & 0x0f;
+				else if((data & 0xf0) == 0xd0)
+					m_fdc_ctrl &= ~data & 0x0f;
+				else if(data == 0xff)
+					m_fdc_ctrl = 0;
+				floppy_image_device *fl = m_floppy ? m_floppy->get_device() : nullptr;
+				if(fl && (m_fdc_ctrl & 1))
+					fl->mon_w(0);   // bit 0 = motor on (switching off is left to the controller model)
+			})).umask32(0x0000ff00);
 	// 0x980000-0x98007f: quad 16550-style UART, channel n at +0x20*n, register r at +4*r+3.
 	// Init at 0x125BFE (DLAB, divisor 20 = 31250 baud with a 10 MHz clock -> MIDI).
 	for(int ch = 0; ch < 4; ch++)
@@ -758,9 +782,10 @@ void psr9000_state::psr9000(machine_config &config)
 	m_fdc->intrq_wr_callback().set(FUNC(psr9000_state::fdc_irq_w));
 	// With the drive's own ready signal, the boot-time RECALIBRATE runs while the motor is still
 	// spinning up, the drive reports "not ready" (ST0 0x68) and the firmware treats the floppy
-	// drive as absent (empty DEVICE list on the disk pages). So "ready" is driven from the
-	// driver instead: ready while a disk is inserted (updated every 10 ms in dial_poll).
-	m_fdc->set_ready_line_connected(false);   // ready = disk present, see dial_poll
+	// drive as absent (empty DEVICE list, no disk detection). The drive is reported ready all
+	// the time, like the real one; whether a disk is in comes from bit 7 of register +2.
+	// (Needs mame/patches/upd765_hd63266f_nodisk.diff: no motor spin-up wait without a disk.)
+	m_fdc->set_ready_line_connected(false);   // drive always ready (see below)
 	m_fdc->drq_wr_callback().set(FUNC(psr9000_state::fdc_drq_w));
 	FLOPPY_CONNECTOR(config, "fdc:0", psr9000_floppies, "35hd", floppy_image_device::default_pc_floppy_formats);
 
