@@ -23,7 +23,9 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
 5. Boot splash: KyranOS, Kyran's own logo (mockups/splash_v2.py + splash_kyran_source.webp),
    DONE in the mod (v1 generated design kept in splash_v1.py).
 6. More later.
-Current layout: mockups/home_v9.py (= v8 + PAN knob on LCD 8, no borders around the controls:
+Current layout: mockups/home_v10.py (= v9 with YAMAHA'S OWN BITMAP FONTS, read from the firmware at
+run time, labels in capitals, control names VOL/BRT/REV/PAN; Kyran: "so much better"; EQ page = eq_v3.py).
+v9 = v8 + PAN knob on LCD 8, no borders around the controls:
 selected = filled dot + inverted name, dotted lines between controls; v8 = v7 + EQ tab; v7 = v6 + dotted texture behind the layers, solid panels behind
 off layers/LEFT, bottom section inverted to a blue panel; v6 = v5 + Yamaha-style blue status bar with yellow text and the
 stock transpose/octave icons, metronome icon under TEMPO; v5 = v4 + TEMPO box on LCD 1,
@@ -193,6 +195,13 @@ DATA DIAL (found):
   cut off at row end. Bit 1 = "ink" in the bitmaps, BUT on the real LCD a set framebuffer bit
   shows LIGHT (pastel yellow) and a clear bit BLUE (confirmed by Kyran on the keyboard; the
   emulator palette and mod/home use this). 237 compressed + 793 raw, all decode exactly.
+- BITMAP FONTS (main): 9 fonts, pointer table 0x357B08, heights 0x357B2C. Per character an 8-byte
+  entry at font + ch*8: u32 glyph pointer, u8 width (advance incl. 1 blank column); glyph rows of
+  (w+7)/8 bytes. Font 1 = 7 px bold labels (SONG, RIGHT1), 3 = 10 px, 4 = 15 px home voice names,
+  6 = font 1 in an 11 px cell, 7 = wide monospace, 8 = stippled (disabled). Fonts 0/2/5 use another
+  layout (0x35178C = 8x8 system font, 8 bytes per char). Text routine 0x105E7E (font id on stack);
+  screens draw into a back buffer at 0x10BA854 (40 bytes/row), copied to 0x10C8AEC by 0x106A76.
+  The mod draws text with these fonts at run time (nothing copied).
 - UI screens are built from widget objects: 0xDEB18 = widget_set_image (stores record ptr at +32).
 - Home screen: top half = image record 0x5F7B6C (drawn by code at ~0x69640, also loads the
   octave -1/0/+1 and bottom-bar icons). Song/lyrics variant = 0x5A1F64 (code ~0x1DC6C0).

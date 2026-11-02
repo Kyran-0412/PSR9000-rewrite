@@ -99,6 +99,13 @@ Two causes, both about redrawing once a second although nothing changed: the sto
 stock UI flush (0x10BB0C) copies the stock screen over ours about once a second (skipped while
 our screen is up). Verified in the emulator: no framebuffer writes at all over 14 s idle.
 
+## Yamaha fonts (mod v12, mockups/home_v10.py, eq_v3.py)
+All text uses the firmware's own bitmap fonts, read from the ROM at run time (table 0x357B08,
+see CLAUDE.md): font 1 (7 px bold) for labels, font 3 (10 px) for values and titles, font 4
+(15 px, the stock home voice-name font) for the layer cards. Labels in capitals; control names
+VOL / BRT / REV / PAN and 5-letter voice names under R1-R3, because these letters are 7 px wide
+and the columns 40 px. The baked Inter fonts are gone (mod 19 KB -> 11.5 KB).
+
 ## PAN + borderless controls (mod v10, mockups/home_v9.py)
 LCD 8 = PAN of the selected part (category 2 id 6, getter 0x50C34; 64 = C, shown L1-L63 /
 R1-R63) drawn as a knob (-135..+135 degrees, pointer table in hp.c). The controls have no

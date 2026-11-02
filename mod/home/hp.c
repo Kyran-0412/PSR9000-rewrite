@@ -17,7 +17,6 @@
  * does not have and any library call. Rules: no division/modulo, no variable shifts
  * (shr/shl below), no writable globals (state is in spare DMA registers).
  */
-#include "font.h"
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -242,45 +241,42 @@ static void rrect2(int x0, int y0, int x1, int y1, int r, int on)
 	rrect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, r > 1 ? r - 1 : 1, 0, on);
 }
 
-static const glyph_t *find_glyph(const font_t *f, char c)
-{
-	int i;
-	for(i = 0; i < f->count; i++)
-		if(f->glyphs[i].ch == c)
-			return &f->glyphs[i];
-	return 0;
-}
+/* ---- text: Yamaha's own bitmap fonts, read from the firmware at run time ----
+ * 0x357B08 = 9 font pointers; per character an 8-byte entry: u32 glyph pointer, u8 width
+ * (advance, includes one blank column); glyph = rows of (w+7)/8 bytes, height 0x357B2C[font].
+ * Fonts used: 1 = 7 px bold labels (stock "SONG", "RIGHT1"), 3 = 10 px values,
+ * 4 = 15 px voice names (stock home screen). */
+#define FT_LABEL 1
+#define FT_VALUE 3
+#define FT_NAME  4
+#define YFONTS  ((const u32 *)0x357b08)
+#define YHEIGHT ((const u8 *)0x357b2c)
 
-static int text_width(const font_t *f, const char *s)
+static const u8 *glyph_entry(int f, char c) { return (const u8 *)(YFONTS[f] + shl((u8)c, 3)); }
+
+static int text_width(int f, const char *s)
 {
 	int w = 0;
-	for(; *s; s++) {
-		const glyph_t *g = find_glyph(f, *s);
-		w += g ? g->advance : f->space;
-	}
-	return w;
+	for(; *s; s++)
+		w += glyph_entry(f, *s)[4];
+	return w ? w - 1 : 0;                    /* the last blank column is spacing */
 }
 
-/* anchor like PIL: h = 'l' left, 'm' middle, 'r' right; vertical is always 'm' */
-static void text(int x, int y, const char *s, const font_t *f, int on, char h)
+/* anchor h = 'l' left, 'm' middle, 'r' right; y = vertical middle of the capitals */
+static void text(int x, int y, const char *s, int f, int on, char h)
 {
-	int base = y + f->mid;
+	int top = y - (f == FT_LABEL ? 3 : f == FT_VALUE ? 5 : 7), rows = YHEIGHT[f];
 	if(h == 'm') x -= half(text_width(f, s));
 	else if(h == 'r') x -= text_width(f, s);
 	for(; *s; s++) {
-		const glyph_t *g = find_glyph(f, *s);
-		int gx, gy;
-		if(!g) {
-			x += f->space;
-			continue;
-		}
-		for(gy = 0; gy < g->h; gy++) {
-			const u8 *row = f->bits + g->offset + gy * g->stride;
-			for(gx = 0; gx < g->w; gx++)
-				if(row[shr(gx, 3)] & bit[gx & 7])
-					px(x + g->x + gx, base + g->y + gy, on);
-		}
-		x += g->advance;
+		const u8 *e = glyph_entry(f, *s);
+		const u8 *g = (const u8 *)(shl(e[0], 24) | shl(e[1], 16) | shl(e[2], 8) | e[3]);
+		int w = e[4], bpr = shr(w + 7, 3), gx, gy;
+		for(gy = 0; gy < rows; gy++, g += bpr)
+			for(gx = 0; gx < w; gx++)
+				if(g[shr(gx, 3)] & bit[gx & 7])
+					px(x + gx, top + gy, on);
+		x += w;
 	}
 }
 
@@ -366,15 +362,16 @@ static void copy_name(char *d, const char *s, int max)
 
 static void upper(char *s) { for(; *s; s++) if(*s >= 'a' && *s <= 'z') *s -= 32; }
 
-/* last word, at most 6 letters (mockup: name.split()[-1][:6]) */
+/* last word, at most 5 letters, capitals (mockup v10: name.split()[-1][:5].upper()) */
 static void short_name(char *d, const char *name)
 {
 	const char *w = name, *p;
 	int n = 0;
 	for(p = name; *p; p++)
 		if(*p == ' ' && p[1]) w = p + 1;
-	while(w[n] && n < 6) { d[n] = w[n]; n++; }
+	while(w[n] && n < 5) { d[n] = w[n]; n++; }
 	d[n] = 0;
+	upper(d);
 }
 
 /* ---- parameters ---- */
@@ -401,7 +398,7 @@ static void set_ctrl(int part, int ctrl, int value)
 
 /* ---- the screen ---- */
 static const char *const part_label[3] = { "R1", "R2", "R3" };
-static const char *const ctrl_name[4] = { "VOLUME", "BRIGHT", "REVERB", "PAN" };
+static const char *const ctrl_name[4] = { "VOL", "BRT", "REV", "PAN" };
 
 /* everything shown on screen, so a change made elsewhere (other task, registration recall,
  * part buttons, voice select) triggers a redraw */
@@ -484,8 +481,8 @@ static void pan_knob(int cx, int cy, int v)
 		fill(x, y, x + 1, y + 1, K);
 	}
 	px(cx, cy - 13, K);                      /* centre mark */
-	text(cx - 13, cy + 10, "L", &f_tiny, K, 'm');
-	text(cx + 13, cy + 10, "R", &f_tiny, K, 'm');
+	text(cx - 13, cy + 10, "L", FT_LABEL, K, 'm');
+	text(cx + 13, cy + 10, "R", FT_LABEL, K, 'm');
 }
 
 static char *pan_text(char *d, int v)    /* 64 -> "C", 44 -> "L20", 84 -> "R20" */
@@ -512,16 +509,16 @@ static void draw_screen(int op, int oc, int ov)
 	/* ---- status bar: Yamaha style, blue bar with yellow text and the stock icons ---- */
 	fill(0, 0, W - 1, 18, K);
 	copy_name(buf, STYLE_NAME, 24);
-	text(8, 9, buf, &f_smallb, WT, 'l');
+	text(8, 9, buf, FT_VALUE, WT, 'l');
 	x = W - 8;
 	num(buf, get_octave() - 1, 1);                 /* octave: keyboard icon + value */
-	text(x, 9, buf, &f_smallb, WT, 'r');
-	x -= text_width(&f_smallb, buf) + 4;
+	text(x, 9, buf, FT_VALUE, WT, 'r');
+	x -= text_width(FT_VALUE, buf) + 4;
 	blit_raw(IMG_OCTAVE0, 0, 0, 19, 10, x - 19, 4, 0);
 	x -= 19 + 12;
 	num(buf, (signed char)get_transpose(), 1);     /* transpose: arrows + keyboard icon + value */
-	text(x, 9, buf, &f_smallb, WT, 'r');
-	x -= text_width(&f_smallb, buf) + 3;
+	text(x, 9, buf, FT_VALUE, WT, 'r');
+	x -= text_width(FT_VALUE, buf) + 3;
 	blit_raw(IMG_TRANSPOSE, 0, 0, 23, 12, x - 23, 3, 1);
 
 	/* ---- layer cards (display only; selected part marked with a side tab) ---- */
@@ -538,8 +535,8 @@ static void draw_screen(int op, int oc, int ov)
 			fg = K;
 			rrect2(36, y + 6, 56, y + 19, 6, K);
 		}
-		text(46, y + 13, part_label[i], &f_tiny, K, 'm');
-		text(64, y + 13, name[i], &f_name, fg, 'l');
+		text(46, y + 13, part_label[i], FT_LABEL, K, 'm');
+		text(64, y + 13, name[i], FT_NAME, fg, 'l');
 		if(on[i]) {
 			e = cat(buf, "VOL ");
 			e = num(e, val(i, 0, op, oc, ov), 0);
@@ -547,7 +544,7 @@ static void draw_screen(int op, int oc, int ov)
 			num(e, val(i, 1, op, oc, ov), 0);
 		} else
 			cat(buf, "OFF");
-		text(W - 31 - 8, y + 13, buf, &f_tiny, fg, 'r');
+		text(W - 31 - 8, y + 13, buf, FT_LABEL, fg, 'r');
 		if(i == sp && !ts) {        /* selection marker: arrow tab on the left */
 			int k;
 			static const u8 tip[7] = { 5, 4, 3, 3, 2, 1, 0 };   /* triangle (22,y+7) (27,y+13) (22,y+19) */
@@ -559,7 +556,7 @@ static void draw_screen(int op, int oc, int ov)
 	}
 	/* v8: side button F (top right) opens the Master EQ page */
 	rrect(W - 28, 20, W - 2, 36, 6, 1, K);
-	text(W - 18, 28, "EQ", &f_tiny, WT, 'm');
+	text(W - 18, 28, "EQ", FT_LABEL, WT, 'm');
 	{
 		int k;
 		for(k = 0; k <= 4; k++)                  /* triangle (W-9,24) (W-5,28) (W-9,32) */
@@ -569,20 +566,20 @@ static void draw_screen(int op, int oc, int ov)
 		}
 	}
 
-	e = cat(buf, "LEFT   ");
+	e = cat(buf, "LEFT  ");
 	copy_name(e, voice_name(3), 20);
 	{
-		int lw = text_width(&f_small, buf);
+		int lw = text_width(FT_LABEL, buf);
 		rrect(W / 2 - half(lw) - 8, 117, W / 2 + half(lw) + 8, 131, 6, 1, WT);
 		rrect2(W / 2 - half(lw) - 8, 117, W / 2 + half(lw) + 8, 131, 6, K);
 	}
-	text(W / 2, 124, buf, &f_small, K, 'm');
+	text(W / 2, 124, buf, FT_LABEL, K, 'm');
 
 	/* ---- bottom row ---- */
 	{
 		const int top = 136;
 		hspan(0, W - 1, top, K);
-		text(100, top + 9, "PART", &f_tiny, K, 'm');
+		text(100, top + 9, "PART", FT_LABEL, K, 'm');
 		if(ts)
 			buf[0] = 0;                      /* tempo selected: nothing above the controls */
 		else {
@@ -591,7 +588,7 @@ static void draw_screen(int op, int oc, int ov)
 			cat(e, name[sp]);
 			upper(buf);
 		}
-		text(240, top + 9, buf, &f_tiny, K, 'm');
+		text(240, top + 9, buf, FT_LABEL, K, 'm');
 		for(y = top + 18; y < H - 3; y += 2) { /* dotted dividers: TEMPO | parts | controls */
 			px(40, y, K);
 			px(160, y, K);
@@ -603,9 +600,9 @@ static void draw_screen(int op, int oc, int ov)
 			if(ts) { rrect(5, top + 20, 35, top + 44, 8, 1, K); fg = WT; }
 			else { rrect2(5, top + 20, 35, top + 44, 8, K); fg = K; }
 			num(buf, get_tempo(), 0);
-			text(20, top + 32, buf, &f_val, fg, 'm');
+			text(20, top + 32, buf, FT_VALUE, fg, 'm');
 			blit_comp(IMG_HOME_BG, 135, 133, 14, 12, 13, top + 50);   /* stock metronome icon */
-			text(20, top + 70, "BPM", &f_tiny, K, 'm');
+			text(20, top + 70, "BPM", FT_LABEL, K, 'm');
 		}
 
 		/* part selectors (buttons 2-4) */
@@ -614,10 +611,10 @@ static void draw_screen(int op, int oc, int ov)
 			x = (i + 1) * 40;
 			if(i == sp && !ts) { rrect(x + 5, top + 20, x + 35, top + 44, 8, 1, K); fg = WT; }
 			else { rrect2(x + 5, top + 20, x + 35, top + 44, 8, K); fg = K; }
-			text(x + 20, top + 32, part_label[i], &f_val, fg, 'm');
-			text(x + 20, top + 56, on[i] ? "ON" : "OFF", &f_tiny, K, 'm');
+			text(x + 20, top + 32, part_label[i], FT_VALUE, fg, 'm');
+			text(x + 20, top + 56, on[i] ? "ON" : "OFF", FT_LABEL, K, 'm');
 			short_name(buf, name[i]);
-			text(x + 20, top + 70, buf, &f_tiny, K, 'm');
+			text(x + 20, top + 70, buf, FT_LABEL, K, 'm');
 		}
 
 		/* controls (buttons 5-8) for the selected part (mockup v9): no borders; selected =
@@ -634,12 +631,12 @@ static void draw_screen(int op, int oc, int ov)
 			rrect(cx - 3, top + 18, cx + 3, top + 24, 3, sel, K);
 			if(sel)
 				rrect(x + 1, top + 26, x + 39, top + 36, 5, 1, K);
-			text(cx, top + 31, ctrl_name[j], &f_tiny, sel ? WT : K, 'm');
+			text(cx, top + 31, ctrl_name[j], FT_LABEL, sel ? WT : K, 'm');
 			if(j == 3)
 				pan_text(buf, v);
 			else
 				num(buf, v, 0);
-			text(cx, top + 45, buf, &f_val, K, 'm');
+			text(cx, top + 45, buf, FT_VALUE, K, 'm');
 			if(j == 3) {
 				pan_knob(cx, 205, v);
 				continue;
@@ -651,8 +648,8 @@ static void draw_screen(int op, int oc, int ov)
 			if(fh)
 				rrect(cx - 3, y1 - fh, cx + 3, y1, 3, 1, K);
 			if(j == 2) {                     /* REVERB on/off pill */
-				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, K); text(cx, H - 11, "ON", &f_tiny, WT, 'm'); }
-				else { rrect2(x + 9, H - 16, x + 31, H - 6, 5, K); text(cx, H - 11, "OFF", &f_tiny, K, 'm'); }
+				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, K); text(cx, H - 11, "ON", FT_LABEL, WT, 'm'); }
+				else { rrect2(x + 9, H - 16, x + 31, H - 6, 5, K); text(cx, H - 11, "OFF", FT_LABEL, K, 'm'); }
 			}
 		}
 	}
@@ -796,10 +793,10 @@ static void draw_eq(int ob, int om, int ov)
 
 	/* status bar */
 	fill(0, 0, W - 1, 18, K);
-	text(8, 9, "MASTER EQ", &f_smallb, WT, 'l');
+	text(8, 9, "MASTER EQ", FT_VALUE, WT, 'l');
 	if(pr >= 0 && pr < 4)
-		text(160, 9, preset_name[pr], &f_smallb, WT, 'm');
-	text(W - 8, 9, "EXIT TO HOME", &f_tiny, WT, 'r');
+		text(160, 9, preset_name[pr], FT_VALUE, WT, 'm');
+	text(W - 8, 9, "EXIT TO HOME", FT_LABEL, WT, 'r');
 
 	/* graph card */
 	rrect(6, 23, W - 7, 131, 7, 1, WT);
@@ -814,14 +811,14 @@ static void draw_eq(int ob, int om, int ov)
 			if(dbs[i] < 0) y = GMID + (int)shr(mul(-dbs[i], 7), 1);
 			for(x = GX0; x < GX1; x += 3) px(x, y, K);
 			num(buf, dbs[i], 1);
-			text(GX0 - 4, y, buf, &f_tiny, K, 'r');
+			text(GX0 - 4, y, buf, FT_LABEL, K, 'r');
 		}
 		hspan(GX0, GX1, GMID, K);
-		text(GX0 - 4, GMID, "0", &f_tiny, K, 'r');
+		text(GX0 - 4, GMID, "0", FT_LABEL, K, 'r');
 		for(i = 0; i < 3; i++) {
 			x = eq_x(fl[i]);
 			for(y = GY0; y < GY1; y += 3) px(x, y, K);
-			text(x, 124, fls[i], &f_tiny, K, 'm');
+			text(x, 124, fls[i], FT_LABEL, K, 'm');
 		}
 	}
 	/* curve: light dots between the curve and 0 dB, then a 2 px line */
@@ -852,18 +849,18 @@ static void draw_eq(int ob, int om, int ov)
 		n[0] = '1' + b; n[1] = 0;
 		x = eq_x(f[b]);
 		cy = half(eq_y2(g[b]));
-		if(b == sb) { rrect(x - 7, cy - 7, x + 7, cy + 7, 7, 1, K); text(x, cy, n, &f_tiny, WT, 'm'); }
+		if(b == sb) { rrect(x - 7, cy - 7, x + 7, cy + 7, 7, 1, K); text(x, cy, n, FT_LABEL, WT, 'm'); }
 		else {
 			rrect(x - 6, cy - 6, x + 6, cy + 6, 6, 1, WT);
 			rrect2(x - 6, cy - 6, x + 6, cy + 6, 6, K);
-			text(x, cy, n, &f_tiny, K, 'm');
+			text(x, cy, n, FT_LABEL, K, 'm');
 		}
 	}
 
 	/* bottom panel (drawn ink-on-paper, then inverted) */
 	{
 		const int top = 136;
-		text(100, top + 9, "BAND", &f_tiny, K, 'm');
+		text(100, top + 9, "BAND", FT_LABEL, K, 'm');
 		e = cat(buf, "EQ");
 		*e++ = '1' + sb; *e = 0;
 		e = cat(e, "  ");
@@ -871,7 +868,7 @@ static void draw_eq(int ob, int om, int ov)
 		while(*e) e++;
 		e = cat(e, "  Q ");
 		q_text(e, q[sb]);
-		text(260, top + 9, buf, &f_tiny, K, 'm');
+		text(260, top + 9, buf, FT_LABEL, K, 'm');
 		for(y = top + 18; y < H - 3; y += 2) px(200, y, K);
 		for(b = 0; b < 5; b++) {                  /* LCD 1-5: band select */
 			int fg;
@@ -880,23 +877,23 @@ static void draw_eq(int ob, int om, int ov)
 			else { rrect2(x + 5, top + 20, x + 35, top + 44, 8, K); fg = K; }
 			e = cat(buf, "EQ");
 			*e++ = '1' + b; *e = 0;
-			text(x + 20, top + 32, buf, &f_small, fg, 'm');
+			text(x + 20, top + 32, buf, FT_LABEL, fg, 'm');
 			gain_text(buf, g[b], 1);
-			text(x + 20, top + 56, buf, &f_tiny, K, 'm');
+			text(x + 20, top + 56, buf, FT_LABEL, K, 'm');
 			freq_text(buf, f[b], 0);
-			text(x + 20, top + 70, buf, &f_tiny, K, 'm');
+			text(x + 20, top + 70, buf, FT_LABEL, K, 'm');
 		}
 		for(b = 0; b < 3; b++) {                  /* LCD 6-8: what the dial changes */
 			int m = mode_of_slot[b], fg;
 			x = mul(b + 5, 40);
 			if(m == sm) { rrect(x + 1, top + 17, x + 38, H - 3, 7, 1, K); fg = WT; }
 			else { rrect(x + 1, top + 17, x + 38, H - 3, 7, 0, K); fg = K; }
-			text(x + 20, top + 29, mode_name[b], &f_tiny, fg, 'm');
+			text(x + 20, top + 29, mode_name[b], FT_LABEL, fg, 'm');
 			if(m == 0) gain_text(buf, g[sb], 0);
 			else if(m == 1) q_text(buf, q[sb]);
 			else freq_text(buf, f[sb], 0);
-			text(x + 20, top + 47, buf, &f_val, fg, 'm');
-			text(x + 20, H - 16, m == 0 ? "dB" : m == 2 ? "Hz" : "", &f_tiny, fg, 'm');
+			text(x + 20, top + 47, buf, FT_VALUE, fg, 'm');
+			text(x + 20, H - 16, m == 0 ? "dB" : m == 2 ? "Hz" : "", FT_LABEL, fg, 'm');
 		}
 	}
 	invert_rows(136, H - 1);
