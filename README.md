@@ -79,7 +79,9 @@ the voice ROM chips are not emulated)</em></p>
   brightness, reverb and the Master EQ.
 
 ### On the real keyboard
-Nothing has been installed on the keyboard yet. Everything above runs in the emulator.
+Nothing has been installed on the keyboard yet; everything above runs in the emulator. The
+first hardware test is prepared: [docs/FIRST_HARDWARE_TEST.md](docs/FIRST_HARDWARE_TEST.md)
+(splash-only test disks first, then the full mod).
 Before the first real test, read the recovery plan in [docs/RECOVERY.md](docs/RECOVERY.md):
 the installer lives in a protected boot area, so the original firmware can be reinstalled
 from Yamaha's disks.
