@@ -1,0 +1,184 @@
+"""Home screen mockup v8 = v7 + an "EQ" tab at the top right, next to side button F
+(opens the new Master EQ page, mockups/eq_v2.py).
+v7 (1-bit): v6 with Yamaha-style depth: dotted texture behind the
+layer area, solid panels behind the off layers and the LEFT line, and the bottom section
+inverted (blue panel, yellow text, selected items in yellow).
+v6: v5 with a Yamaha-style status bar (filled bar, inverted
+text, stock transpose/octave icons, no boxes, no BPM) and the stock metronome icon under the
+TEMPO box; nothing above the controls while TEMPO is selected.
+Icons are read from firmware/roms/psr9000/p9000m.001 when present (not in git).
+v5: bottom row moved one button right and a TEMPO
+box on LCD 1 (selected: the dial changes tempo; selecting R1-R3 gives the dial back to the
+controls). Run: python3 home_v5.py out.png [sel_part 0-2, or -1 = TEMPO] [sel_ctrl 0-2] Bottom row: buttons 1-3 select the part (R1/R2/R3),
+buttons 4-8 select a control for that part, the dial changes the value.
+Run: python3 mockups/home_v3.py out.png [sel_part 0-2] [sel_ctrl 0-4]"""
+import sys
+from PIL import Image, ImageDraw, ImageFont
+
+W, H = 320, 240
+F = '/usr/share/fonts/opentype/inter/'
+def font(w, s): return ImageFont.truetype(F + 'Inter-%s.otf' % w, s)
+f_tiny, f_small, f_smallb = font('Bold', 8), font('Bold', 10), font('Bold', 10)
+f_name, f_val, f_reg = font('Bold', 14), font('Bold', 13), font('Bold', 14)
+
+sel_part_arg = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+tempo_sel = sel_part_arg < 0
+sel_part = 0 if tempo_sel else sel_part_arg
+sel_ctrl = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+
+img = Image.new('1', (W, H), 1)
+d = ImageDraw.Draw(img); d.fontmode = '1'
+K, Wt = 0, 1
+def t(xy, s, f, fill=K, anchor='la'): d.text(xy, s, font=f, fill=fill, anchor=anchor)
+def t_fit(xy, s, f, fill, avail):  # centred; letter spacing -1 px if the text would not fit
+    w = d.textlength(s, font=f)
+    if w <= avail:
+        return t(xy, s, f, fill, 'mm')
+    adv = [int(f.getlength(c)) - 1 for c in s]
+    x = xy[0] - (sum(adv) + 1) // 2
+    for c, a in zip(s, adv):
+        d.text((x, xy[1]), c, font=f, fill=fill, anchor='lm'); x += a
+def dashed_box(b, r=0):            # 2x2 dashes every 5 px
+    x0, y0, x1, y1 = b
+    for x in range(x0 + 6, x1 - 6, 5): d.rectangle((x, y0, x + 1, y0 + 1), fill=K); d.rectangle((x, y1 - 1, x + 1, y1), fill=K)
+    for y in range(y0 + 6, y1 - 6, 5): d.rectangle((x0, y, x0 + 1, y + 1), fill=K); d.rectangle((x1 - 1, y, x1, y + 1), fill=K)
+
+# example state per part: name, on, vol, bright, reverb(level,on), chorus, octave
+parts = [dict(p='R1', name='Live! Grand', on=True,  v=[100, 64, 40, 0, 0], rev=True),
+         dict(p='R2', name='Live! Strs',  on=True,  v=[82, 80, 64, 20, 0], rev=True),
+         dict(p='R3', name='Cool! Organ', on=False, v=[64, 64, 40, 0, -1], rev=False)]
+ctrls = ['VOLUME', 'BRIGHT', 'REVERB', None]   # slot 8 left free
+BPM = 140
+
+# ---- status bar (Yamaha style) ----
+import os, struct
+RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'firmware', 'roms', 'psr9000', 'p9000m.001')
+res = open(RES, 'rb').read() if os.path.exists(RES) else None
+def icon(rec, sx, sy, w, h, dx, dy, inv=0):
+    # stock image bits: 1 = paper, 0 = ink (blue on the real LCD); here ink = K
+    if not res:
+        d.rectangle((dx, dy, dx + w - 1, dy + h - 1), outline=Wt if inv else K); return
+    ww, hh, fl, p = struct.unpack('>HHII', res[rec - 0x4F0000:rec - 0x4F0000 + 12])
+    o = p - 0x4F0000
+    if fl == 0:
+        bpr = (ww + 7) // 8
+        get = lambda x, y: (res[o + y * bpr + x // 8] >> (7 - x % 8)) & 1
+    else:
+        n = struct.unpack('>H', res[o:o + 2])[0]; pxs = []; x = 0
+        for b in res[o + 2:o + 2 + n]:
+            bits = [(b >> k) & 1 for k in range(6, -1, -1)][:ww - x] if b < 0x80 else [1 if b & 0x40 else 0] * ((b & 0x3F) + 1)
+            for v in bits:
+                pxs.append(v); x += 1
+                if x == ww:
+                    x = 0
+                    if b < 0x80: break
+        get = lambda x, y: pxs[y * ww + x]
+    for y in range(h):
+        for x in range(w):
+            v = get(sx + x, sy + y) ^ inv
+            d.point((dx + x, dy + y), Wt if v else K)
+d.rectangle((0, 0, W - 1, 18), fill=K)
+t((8, 9), 'Heart Beat', f_smallb, Wt, 'lm')
+x = W - 8
+t((x, 9), '0', f_smallb, Wt, 'rm'); x -= d.textlength('0', font=f_smallb) + 4
+icon(0x5F7BAC, 0, 0, 19, 10, x - 19, 4); x -= 19 + 12
+t((x, 9), '0', f_smallb, Wt, 'rm'); x -= d.textlength('0', font=f_smallb) + 3
+icon(0x5F7CBC, 0, 0, 23, 12, x - 23, 3, 1)
+
+# ---- dotted texture behind the layer area (Yamaha style: 1 ink dot in 8 pixels) ----
+for yy in range(19, 136):
+    for xx in range(W):
+        if (yy % 4 == 0 and xx % 4 == 0) or (yy % 4 == 2 and xx % 4 == 2):
+            d.point((xx, yy), K)
+
+# ---- layer cards (display only; selected part marked with a side tab) ----
+for i, P in enumerate(parts):
+    y = 25 + i * 31
+    box = (30, y, W - 31, y + 26)
+    on = P['on']
+    if on:
+        d.rounded_rectangle(box, 7, fill=K); fg = Wt
+    else:
+        d.rounded_rectangle(box, 7, fill=Wt, outline=K, width=2); fg = K
+    d.rounded_rectangle((36, y + 6, 56, y + 19), 6, fill=Wt if on else None, outline=K if not on else None, width=2)
+    t((46, y + 13), P['p'], f_tiny, K, 'mm')
+    t((64, y + 13), P['name'], f_name if on else f_reg, fg, 'lm')
+    t((box[2] - 8, y + 13), 'VOL %d  BRT %d' % (P['v'][0], P['v'][1]) if on else 'OFF', f_tiny, fg, 'rm')
+    if i == sel_part and not tempo_sel:     # selection marker: arrow tab on the left
+        d.polygon([(22, y + 7), (27, y + 13), (22, y + 19)], fill=K)
+lw = d.textlength('LEFT   Galaxy EP', font=f_small)
+d.rounded_rectangle((W // 2 - lw // 2 - 8, 117, W // 2 + lw // 2 + 8, 131), 6, fill=Wt, outline=K, width=2)
+t((W // 2, 124), 'LEFT   Galaxy EP', f_small, anchor='mm')
+
+# ---- v8: side button F (top right) opens the Master EQ page ----
+d.rounded_rectangle((W - 28, 20, W - 2, 36), 6, fill=K)
+t((W - 18, 28), 'EQ', f_tiny, Wt, 'mm')
+d.polygon([(W - 9, 24), (W - 5, 28), (W - 9, 32)], fill=Wt)
+
+# ---- bottom row ----
+top = 136
+d.line((0, top, W, top), fill=K)
+t((100, top + 9), 'PART', f_tiny, anchor='mm')
+P = parts[sel_part]
+t((240, top + 9), '' if tempo_sel else '%s  %s' % (P['p'], P['name'].upper()), f_tiny, anchor='mm')
+for yy in range(top + 18, H - 3, 2): d.point((40, yy), K); d.point((160, yy), K)
+
+# tempo box (button 1)
+b = (5, top + 20, 35, top + 44)
+if tempo_sel:
+    d.rounded_rectangle(b, 8, fill=K); fg = Wt
+else:
+    d.rounded_rectangle(b, 8, outline=K, width=2); fg = K
+t((20, top + 32), str(BPM), f_val, fg, 'mm')
+icon(0x5F7B6C, 135, 133, 14, 12, 13, top + 50)
+t((20, top + 70), 'BPM', f_tiny, anchor='mm')
+
+# part selectors (buttons 1-3)
+for i, Q in enumerate(parts):
+    x = (i + 1) * 40
+    b = (x + 5, top + 20, x + 35, top + 44)
+    if i == sel_part and not tempo_sel:
+        d.rounded_rectangle(b, 8, fill=K); fg = Wt
+    else:
+        d.rounded_rectangle(b, 8, outline=K, width=2); fg = K
+    t((x + 20, top + 32), Q['p'], f_val, fg, 'mm')
+    t((x + 20, top + 56), 'ON' if Q['on'] else 'OFF', f_tiny, anchor='mm')
+    t((x + 20, top + 70), Q['name'].split()[-1][:6], f_tiny, anchor='mm')
+
+# controls (buttons 4-8) for the selected part
+for j, name in enumerate(ctrls):
+    x = (j + 4) * 40
+    if name is None:                         # free slot: faint dashed outline only
+        dashed_box((x, top + 17, x + 38, H - 3))
+        continue
+    val = P['v'][j]
+    if j == sel_ctrl and not tempo_sel:
+        d.rounded_rectangle((x, top + 17, x + 38, H - 3), 7, fill=K); fg = Wt
+    else:
+        d.rounded_rectangle((x, top + 17, x + 38, H - 3), 7, outline=K, width=1); fg = K
+    t_fit((x + 19, top + 27), name, f_tiny, fg, 36)
+    txt = ('%+d' % val if val else '0') if name == 'OCTAVE' else str(val)
+    t((x + 19, top + 41), txt, f_val, fg, "mm")
+    y0, y1 = top + 54, H - 22
+    if name == 'OCTAVE':                     # 5 dots for -2..+2
+        for k in range(5):
+            cy = y1 - k * (y1 - y0) // 4
+            r = 3 if k - 2 == val else 1
+            d.ellipse((x + 20 - r, cy - r, x + 20 + r, cy + r), fill=fg)
+    else:
+        for yy in range(y0, y1 + 1, 2): d.point((x + 20, yy), fg)
+        fh = int((y1 - y0) * val / 127)
+        if fh: d.rounded_rectangle((x + 17, y1 - fh, x + 23, y1), 3, fill=fg)
+    if name == 'REVERB':
+        on = P['rev']
+        b = (x + 9, H - 16, x + 31, H - 6)
+        if on: d.rounded_rectangle(b, 5, fill=fg); t((x + 20, H - 11), 'ON', f_tiny, Wt if fg == K else K, 'mm')
+        else: d.rounded_rectangle(b, 5, outline=fg, width=2); t((x + 20, H - 11), 'OFF', f_tiny, fg, 'mm')
+
+# bottom section inverted (blue panel)
+from PIL import ImageOps
+bottom = img.crop((0, 136, W, H))
+img.paste(ImageOps.invert(bottom.convert('L')).convert('1'), (0, 136))
+out = sys.argv[1] if len(sys.argv) > 1 else 'home_v8.png'
+rgb = Image.new('RGB', (W, H)); rgb.putdata([(0xfb, 0xf3, 0xa8) if v else (0x36, 0x41, 0xcf) for v in img.get_flattened_data()])
+rgb.resize((W * 3, H * 3), Image.NEAREST).save(out)
