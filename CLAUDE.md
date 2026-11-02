@@ -114,6 +114,8 @@ DATA DIAL (found):
   is shown (dial adjusts the selected control), restore with 0x6D0D2 when leaving.
 
 ## Ground rules
+- Keep README.md (project overview for GitHub: what it is, goals, what works so far) up to date:
+  update its "What works so far" section in the same commit as any new feature or milestone.
 - Yamaha firmware binaries and the service manual are copyrighted: NEVER commit them.
   They live in `firmware/` and `docs/private/`, both in `.gitignore`.
 - Owner is Kyran. He tests on the real keyboard only occasionally, so prefer work that can be
