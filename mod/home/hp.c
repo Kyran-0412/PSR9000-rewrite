@@ -648,8 +648,8 @@ static void draw_screen(int op, int oc, int ov)
 			if(fh)
 				rrect(cx - 3, y1 - fh, cx + 3, y1, 3, 1, K);
 			if(j == 2) {                     /* REVERB on/off pill */
-				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, K); text(cx, H - 11, "ON", FT_LABEL, WT, 'm'); }
-				else { rrect2(x + 9, H - 16, x + 31, H - 6, 5, K); text(cx, H - 11, "OFF", FT_LABEL, K, 'm'); }
+				rrect(x + 6, H - 16, x + 34, H - 6, 5, 1, K);   /* filled either way */
+				text(cx, H - 11, v ? "ON" : "OFF", FT_LABEL, WT, 'm');
 			}
 		}
 	}

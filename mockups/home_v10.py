@@ -209,9 +209,9 @@ for j, name in enumerate(ctrls):
         if fh: d.rounded_rectangle((cx - 3, y1 - fh, cx + 3, y1), 3, fill=K)
     if name == 'REV':
         on = P['rev']
-        b = (x + 9, H - 16, x + 31, H - 6)
-        if on: d.rounded_rectangle(b, 5, fill=K); t((cx, H - 11), 'ON', f_tiny, Wt, 'mm')
-        else: d.rounded_rectangle(b, 5, outline=K, width=2); t((cx, H - 11), 'OFF', f_tiny, K, 'mm')
+        b = (x + 6, H - 16, x + 34, H - 6)
+        d.rounded_rectangle(b, 5, fill=K)       # filled either way, text says ON / OFF
+        t((cx, H - 11), 'ON' if on else 'OFF', f_tiny, Wt, 'mm')
 
 # bottom section inverted (blue panel)
 from PIL import ImageOps
