@@ -1,0 +1,116 @@
+snap D home start
+press KBD TRANSPOSE +
+snap D TRANSPOSE + (TRP 1)
+press KBD TRANSPOSE +
+snap D TRANSPOSE + (TRP 2)
+press KBD TRANSPOSE -
+press KBD TRANSPOSE -
+press KBD TRANSPOSE -
+snap D TRANSPOSE -1
+press KBD TRANSPOSE +
+press UPPER OCTAVE +
+snap D OCTAVE +1
+press UPPER OCTAVE -
+press UPPER OCTAVE -
+snap D OCTAVE -1
+press UPPER OCTAVE +
+press PART ON/OFF RIGHT2
+snap D R2 ON/OFF toggled
+press PART ON/OFF RIGHT3
+snap D R3 toggled
+press PART ON/OFF LEFT
+snap D LEFT toggled
+press PART ON/OFF RIGHT1
+snap D R1 toggled
+press PART ON/OFF RIGHT1
+press PART ON/OFF RIGHT2
+press PART ON/OFF RIGHT3
+press PART ON/OFF LEFT
+snap D parts restored
+press PART SELECT RIGHT2
+snap D PART SELECT R2
+press PART SELECT RIGHT3
+snap D PART SELECT R3
+press PART SELECT LEFT
+snap D PART SELECT L
+press PART SELECT RIGHT1
+snap D PART SELECT R1
+press P.VOICE STRINGS
+wait 0.5
+snap D VOICE STRINGS list
+press LCD B
+wait 0.5
+snap D select voice B
+press EXIT
+snap D home after voice
+dial 10
+snap D tempo +10
+dial -20
+snap D tempo -10
+press TAP TEMPO
+press TAP TEMPO
+press TAP TEMPO
+press TAP TEMPO
+snap D tap tempo
+press MAIN MIXER
+snap D MIXER page 2
+press MAIN MIXER
+snap D MIXER page 3
+press MAIN MIXER
+snap D MIXER page 4
+press MAIN MIXER
+snap D MIXER page 1
+press LCD 5 UP | 1.5
+snap D R1 vol held up
+press LCD 5 DOWN | 1.5
+snap D R1 vol held down
+press REGIST BANK +
+snap D BANK +
+press REGIST BANK -
+snap D BANK -
+press KBD TRANSPOSE +
+press KBD TRANSPOSE +
+press MEMORY
+wait 0.4
+snap D MEMORY pressed
+press REGIST 1
+wait 1
+snap D stored to REGIST 1
+press KBD TRANSPOSE -
+press KBD TRANSPOSE -
+snap D transpose back 0
+press REGIST 1
+wait 1
+snap D recall REGIST 1 (expect TRP 2)
+press KBD TRANSPOSE -
+press KBD TRANSPOSE -
+press ONE TOUCH SETTING 1
+snap D OTS 1
+press MULTIPAD 1
+snap D MULTIPAD 1
+press MULTIPAD +
+snap D M.PAD BANK +
+press TOUCH
+snap D TOUCH
+press SUSTAIN
+snap D SUSTAIN
+press DSP(4-7)
+snap D DSP
+press HARMONY/ECHO
+snap D HARMONY
+press POLY/MONO
+snap D POLY/MONO
+press START/STOP
+wait 1
+snap D START/STOP (no style data)
+press START/STOP
+wait 0.5
+snap D after stop
+press DEMO
+wait 2
+snap D DEMO
+press EXIT
+press EXIT
+wait 1
+snap D end
+quit

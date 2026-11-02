@@ -1,0 +1,883 @@
+press SONG FILE DIRECTORY 1
+wait 0.6
+snap A SONG FILE DIRECTORY 1
+press EXIT
+press EXIT
+press EXIT
+press SONG FILE DIRECTORY 2
+wait 0.6
+snap A SONG FILE DIRECTORY 2
+press EXIT
+press EXIT
+press EXIT
+press SONG FILE DIRECTORY 3
+wait 0.6
+snap A SONG FILE DIRECTORY 3
+press EXIT
+press EXIT
+press EXIT
+press SONG FILE DIRECTORY 4
+wait 0.6
+snap A SONG FILE DIRECTORY 4
+press EXIT
+press EXIT
+press EXIT
+press SONG FILE DIRECTORY 5
+wait 0.6
+snap A SONG FILE DIRECTORY 5
+press EXIT
+press EXIT
+press EXIT
+press SONG SETUP
+wait 0.6
+snap A SONG SETUP
+press EXIT
+press EXIT
+press EXIT
+press SONG PLAYER
+wait 0.6
+snap A SONG PLAYER
+press EXIT
+press EXIT
+press EXIT
+press AUTO ACCOMPANIMENT
+wait 0.6
+snap A AUTO ACCOMPANIMENT
+press EXIT
+press EXIT
+press EXIT
+press 8 BEAT
+wait 0.6
+snap A 8 BEAT
+press EXIT
+press EXIT
+press EXIT
+press 16 BEAT
+wait 0.6
+snap A 16 BEAT
+press EXIT
+press EXIT
+press EXIT
+press DANCE
+wait 0.6
+snap A DANCE
+press EXIT
+press EXIT
+press EXIT
+press SWING & JAZZ
+wait 0.6
+snap A SWING & JAZZ
+press EXIT
+press EXIT
+press EXIT
+press R & B
+wait 0.6
+snap A R & B
+press EXIT
+press EXIT
+press EXIT
+press COUNTRY
+wait 0.6
+snap A COUNTRY
+press EXIT
+press EXIT
+press EXIT
+press LATIN
+wait 0.6
+snap A LATIN
+press EXIT
+press EXIT
+press EXIT
+press MARCH & WALTZ
+wait 0.6
+snap A MARCH & WALTZ
+press EXIT
+press EXIT
+press EXIT
+press BALLROOM
+wait 0.6
+snap A BALLROOM
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 1
+wait 0.6
+snap A FLASH STYLE 1
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 2
+wait 0.6
+snap A FLASH STYLE 2
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 3
+wait 0.6
+snap A FLASH STYLE 3
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 4
+wait 0.6
+snap A FLASH STYLE 4
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 5
+wait 0.6
+snap A FLASH STYLE 5
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 6
+wait 0.6
+snap A FLASH STYLE 6
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 7
+wait 0.6
+snap A FLASH STYLE 7
+press EXIT
+press EXIT
+press EXIT
+press FLASH STYLE 8
+wait 0.6
+snap A FLASH STYLE 8
+press EXIT
+press EXIT
+press EXIT
+press DISKDIRECT
+wait 0.6
+snap A DISKDIRECT
+press EXIT
+press EXIT
+press EXIT
+press INTRO 1
+wait 0.6
+snap A INTRO 1
+press EXIT
+press EXIT
+press EXIT
+press INTRO 2
+wait 0.6
+snap A INTRO 2
+press EXIT
+press EXIT
+press EXIT
+press INTRO 3
+wait 0.6
+snap A INTRO 3
+press EXIT
+press EXIT
+press EXIT
+press TAP TEMPO
+wait 0.6
+snap A TAP TEMPO
+press EXIT
+press EXIT
+press EXIT
+press ENDING 1
+wait 0.6
+snap A ENDING 1
+press EXIT
+press EXIT
+press EXIT
+press ENDING 2
+wait 0.6
+snap A ENDING 2
+press EXIT
+press EXIT
+press EXIT
+press ENDING 3
+wait 0.6
+snap A ENDING 3
+press EXIT
+press EXIT
+press EXIT
+press FADE IN/OUT
+wait 0.6
+snap A FADE IN/OUT
+press EXIT
+press EXIT
+press EXIT
+press SYNC STOP
+wait 0.6
+snap A SYNC STOP
+press EXIT
+press EXIT
+press EXIT
+press SYNC START
+wait 0.6
+snap A SYNC START
+press EXIT
+press EXIT
+press EXIT
+press MAIN A
+wait 0.6
+snap A MAIN A
+press EXIT
+press EXIT
+press EXIT
+press MAIN B
+wait 0.6
+snap A MAIN B
+press EXIT
+press EXIT
+press EXIT
+press MAIN C
+wait 0.6
+snap A MAIN C
+press EXIT
+press EXIT
+press EXIT
+press MAIN D
+wait 0.6
+snap A MAIN D
+press EXIT
+press EXIT
+press EXIT
+press FILL DOWN
+wait 0.6
+snap A FILL DOWN
+press EXIT
+press EXIT
+press EXIT
+press FILL SELF
+wait 0.6
+snap A FILL SELF
+press EXIT
+press EXIT
+press EXIT
+press FILL BREAK
+wait 0.6
+snap A FILL BREAK
+press EXIT
+press EXIT
+press EXIT
+press FILL UP
+wait 0.6
+snap A FILL UP
+press EXIT
+press EXIT
+press EXIT
+press START/STOP
+wait 0.6
+snap A START/STOP
+press EXIT
+press EXIT
+press EXIT
+press DISK/SCSI
+wait 0.6
+snap A DISK/SCSI
+press EXIT
+press EXIT
+press EXIT
+press FUNCTION
+wait 0.6
+snap A FUNCTION
+press EXIT
+press EXIT
+press EXIT
+press MIDI
+wait 0.6
+snap A MIDI
+press EXIT
+press EXIT
+press EXIT
+press KBD TRANSPOSE -
+wait 0.6
+snap A KBD TRANSPOSE -
+press EXIT
+press EXIT
+press EXIT
+press KBD TRANSPOSE +
+wait 0.6
+snap A KBD TRANSPOSE +
+press EXIT
+press EXIT
+press EXIT
+press SOUND CREATOR
+wait 0.6
+snap A SOUND CREATOR
+press EXIT
+press EXIT
+press EXIT
+press DIGITAL RECORDING
+wait 0.6
+snap A DIGITAL RECORDING
+press EXIT
+press EXIT
+press EXIT
+press MIXING CONSOLE
+wait 0.6
+snap A MIXING CONSOLE
+press EXIT
+press EXIT
+press EXIT
+press LCD A
+wait 0.6
+snap A LCD A
+press EXIT
+press EXIT
+press EXIT
+press LCD B
+wait 0.6
+snap A LCD B
+press EXIT
+press EXIT
+press EXIT
+press LCD C
+wait 0.6
+snap A LCD C
+press EXIT
+press EXIT
+press EXIT
+press LCD D
+wait 0.6
+snap A LCD D
+press EXIT
+press EXIT
+press EXIT
+press LCD E
+wait 0.6
+snap A LCD E
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD STOP
+wait 0.6
+snap A MULTIPAD STOP
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD -
+wait 0.6
+snap A MULTIPAD -
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD +
+wait 0.6
+snap A MULTIPAD +
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD 1
+wait 0.6
+snap A MULTIPAD 1
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD 2
+wait 0.6
+snap A MULTIPAD 2
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD 3
+wait 0.6
+snap A MULTIPAD 3
+press EXIT
+press EXIT
+press EXIT
+press MULTIPAD 4
+wait 0.6
+snap A MULTIPAD 4
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.6
+snap A DIRECT ACCESS
+press EXIT
+press EXIT
+press EXIT
+press PART ON/OFF
+wait 0.6
+snap A PART ON/OFF
+press EXIT
+press EXIT
+press EXIT
+press MAIN MIXER
+wait 0.6
+snap A MAIN MIXER
+press EXIT
+press EXIT
+press EXIT
+press LCD 1 UP
+wait 0.6
+snap A LCD 1 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 2 UP
+wait 0.6
+snap A LCD 2 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 3 UP
+wait 0.6
+snap A LCD 3 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 4 UP
+wait 0.6
+snap A LCD 4 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 5 UP
+wait 0.6
+snap A LCD 5 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 6 UP
+wait 0.6
+snap A LCD 6 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 7 UP
+wait 0.6
+snap A LCD 7 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 8 UP
+wait 0.6
+snap A LCD 8 UP
+press EXIT
+press EXIT
+press EXIT
+press LCD 1 DOWN
+wait 0.6
+snap A LCD 1 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 2 DOWN
+wait 0.6
+snap A LCD 2 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 3 DOWN
+wait 0.6
+snap A LCD 3 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 4 DOWN
+wait 0.6
+snap A LCD 4 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 5 DOWN
+wait 0.6
+snap A LCD 5 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 6 DOWN
+wait 0.6
+snap A LCD 6 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 7 DOWN
+wait 0.6
+snap A LCD 7 DOWN
+press EXIT
+press EXIT
+press EXIT
+press LCD 8 DOWN
+wait 0.6
+snap A LCD 8 DOWN
+press EXIT
+press EXIT
+press EXIT
+press TOUCH
+wait 0.6
+snap A TOUCH
+press EXIT
+press EXIT
+press EXIT
+press DSP(4-7)
+wait 0.6
+snap A DSP(4-7)
+press EXIT
+press EXIT
+press EXIT
+press HARMONY/ECHO
+wait 0.6
+snap A HARMONY/ECHO
+press EXIT
+press EXIT
+press EXIT
+press SUSTAIN
+wait 0.6
+snap A SUSTAIN
+press EXIT
+press EXIT
+press EXIT
+press SLOW/FAST
+wait 0.6
+snap A SLOW/FAST
+press EXIT
+press EXIT
+press EXIT
+press POLY/MONO
+wait 0.6
+snap A POLY/MONO
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE PIANO
+wait 0.6
+snap A P.VOICE PIANO
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE E.PIANO
+wait 0.6
+snap A P.VOICE E.PIANO
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE ORGAN
+wait 0.6
+snap A P.VOICE ORGAN
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE ACCORDION
+wait 0.6
+snap A P.VOICE ACCORDION
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE GUITAR
+wait 0.6
+snap A P.VOICE GUITAR
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE STRINGS
+wait 0.6
+snap A P.VOICE STRINGS
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE TRUMPET
+wait 0.6
+snap A P.VOICE TRUMPET
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE BRASS
+wait 0.6
+snap A P.VOICE BRASS
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE SAXOPHONE
+wait 0.6
+snap A P.VOICE SAXOPHONE
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE FLUTE
+wait 0.6
+snap A P.VOICE FLUTE
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE CHOIR & PAD
+wait 0.6
+snap A P.VOICE CHOIR & PAD
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE SYNTHESIZER
+wait 0.6
+snap A P.VOICE SYNTHESIZER
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE PERCUSSION
+wait 0.6
+snap A P.VOICE PERCUSSION
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE XG
+wait 0.6
+snap A P.VOICE XG
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE ORGAN FLUTES
+wait 0.6
+snap A P.VOICE ORGAN FLUTES
+press EXIT
+press EXIT
+press EXIT
+press P.VOICE CUSTOM VOICE
+wait 0.6
+snap A P.VOICE CUSTOM VOICE
+press EXIT
+press EXIT
+press EXIT
+press PART SELECT LEFT
+wait 0.6
+snap A PART SELECT LEFT
+press EXIT
+press EXIT
+press EXIT
+press PART SELECT RIGHT1
+wait 0.6
+snap A PART SELECT RIGHT1
+press EXIT
+press EXIT
+press EXIT
+press PART SELECT RIGHT2
+wait 0.6
+snap A PART SELECT RIGHT2
+press EXIT
+press EXIT
+press EXIT
+press PART SELECT RIGHT3
+wait 0.6
+snap A PART SELECT RIGHT3
+press EXIT
+press EXIT
+press EXIT
+press LEFT HOLD
+wait 0.6
+snap A LEFT HOLD
+press EXIT
+press EXIT
+press EXIT
+press PART ON/OFF LEFT
+wait 0.6
+snap A PART ON/OFF LEFT
+press EXIT
+press EXIT
+press EXIT
+press PART ON/OFF RIGHT1
+wait 0.6
+snap A PART ON/OFF RIGHT1
+press EXIT
+press EXIT
+press EXIT
+press PART ON/OFF RIGHT2
+wait 0.6
+snap A PART ON/OFF RIGHT2
+press EXIT
+press EXIT
+press EXIT
+press PART ON/OFF RIGHT3
+wait 0.6
+snap A PART ON/OFF RIGHT3
+press EXIT
+press EXIT
+press EXIT
+press VOCAL HARMONY TALK
+wait 0.6
+snap A VOCAL HARMONY TALK
+press EXIT
+press EXIT
+press EXIT
+press VOCAL HARMONY DSP(8)
+wait 0.6
+snap A VOCAL HARMONY DSP(8)
+press EXIT
+press EXIT
+press EXIT
+press VOCAL HARMONY (9)
+wait 0.6
+snap A VOCAL HARMONY (9)
+press EXIT
+press EXIT
+press EXIT
+press R.MEMORY FREEZE
+wait 0.6
+snap A R.MEMORY FREEZE
+press EXIT
+press EXIT
+press EXIT
+press DEMO
+wait 0.6
+snap A DEMO
+press EXIT
+press EXIT
+press EXIT
+press LCD F
+wait 0.6
+snap A LCD F
+press EXIT
+press EXIT
+press EXIT
+press LCD G
+wait 0.6
+snap A LCD G
+press EXIT
+press EXIT
+press EXIT
+press LCD H
+wait 0.6
+snap A LCD H
+press EXIT
+press EXIT
+press EXIT
+press LCD I
+wait 0.6
+snap A LCD I
+press EXIT
+press EXIT
+press EXIT
+press LCD J
+wait 0.6
+snap A LCD J
+press EXIT
+press EXIT
+press EXIT
+press PAGE CONTROL BACK
+wait 0.6
+snap A PAGE CONTROL BACK
+press EXIT
+press EXIT
+press EXIT
+press PAGE CONTROL NEXT
+wait 0.6
+snap A PAGE CONTROL NEXT
+press EXIT
+press EXIT
+press EXIT
+press MUSIC DATABASE
+wait 0.6
+snap A MUSIC DATABASE
+press EXIT
+press EXIT
+press EXIT
+press ONE TOUCH SETTING 1
+wait 0.6
+snap A ONE TOUCH SETTING 1
+press EXIT
+press EXIT
+press EXIT
+press ONE TOUCH SETTING 2
+wait 0.6
+snap A ONE TOUCH SETTING 2
+press EXIT
+press EXIT
+press EXIT
+press ONE TOUCH SETTING 3
+wait 0.6
+snap A ONE TOUCH SETTING 3
+press EXIT
+press EXIT
+press EXIT
+press ONE TOUCH SETTING 4
+wait 0.6
+snap A ONE TOUCH SETTING 4
+press EXIT
+press EXIT
+press EXIT
+press UPPER OCTAVE -
+wait 0.6
+snap A UPPER OCTAVE -
+press EXIT
+press EXIT
+press EXIT
+press UPPER OCTAVE +
+wait 0.6
+snap A UPPER OCTAVE +
+press EXIT
+press EXIT
+press EXIT
+press V.HARMONY SELECT
+wait 0.6
+snap A V.HARMONY SELECT
+press EXIT
+press EXIT
+press EXIT
+press V.HARMONY MIC SETUP
+wait 0.6
+snap A V.HARMONY MIC SETUP
+press EXIT
+press EXIT
+press EXIT
+press REGIST BANK -
+wait 0.6
+snap A REGIST BANK -
+press EXIT
+press EXIT
+press EXIT
+press REGIST BANK +
+wait 0.6
+snap A REGIST BANK +
+press EXIT
+press EXIT
+press EXIT
+press REGIST 1
+wait 0.6
+snap A REGIST 1
+press EXIT
+press EXIT
+press EXIT
+press REGIST 2
+wait 0.6
+snap A REGIST 2
+press EXIT
+press EXIT
+press EXIT
+press REGIST 3
+wait 0.6
+snap A REGIST 3
+press EXIT
+press EXIT
+press EXIT
+press REGIST 4
+wait 0.6
+snap A REGIST 4
+press EXIT
+press EXIT
+press EXIT
+press REGIST 5
+wait 0.6
+snap A REGIST 5
+press EXIT
+press EXIT
+press EXIT
+press REGIST 6
+wait 0.6
+snap A REGIST 6
+press EXIT
+press EXIT
+press EXIT
+press REGIST 7
+wait 0.6
+snap A REGIST 7
+press EXIT
+press EXIT
+press EXIT
+press REGIST 8
+wait 0.6
+snap A REGIST 8
+press EXIT
+press EXIT
+press EXIT
+press MEMORY
+wait 0.6
+snap A MEMORY
+press EXIT
+press EXIT
+press EXIT
+quit

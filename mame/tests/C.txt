@@ -1,0 +1,827 @@
+press FUNCTION
+wait 0.3
+press LCD A
+wait 0.5
+snap C FUNCTION > MASTER TUNE/SCALE TUNE
+press PAGE CONTROL NEXT
+snap C FUNCTION > MASTER TUNE/SCALE TUNE > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > MASTER TUNE/SCALE TUNE > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD B
+wait 0.5
+snap C FUNCTION > SPLIT POINT/FINGERING
+press PAGE CONTROL NEXT
+snap C FUNCTION > SPLIT POINT/FINGERING > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > SPLIT POINT/FINGERING > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+snap C FUNCTION > CONTROLLER
+press PAGE CONTROL NEXT
+snap C FUNCTION > CONTROLLER > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > CONTROLLER > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD D
+wait 0.5
+snap C FUNCTION > REGIST/FREEZE/VOICE SET
+press PAGE CONTROL NEXT
+snap C FUNCTION > REGIST/FREEZE/VOICE SET > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > REGIST/FREEZE/VOICE SET > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD E
+wait 0.5
+snap C FUNCTION > HARMONY/ECHO
+press PAGE CONTROL NEXT
+snap C FUNCTION > HARMONY/ECHO > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > HARMONY/ECHO > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD F
+wait 0.5
+snap C FUNCTION > VIDEO OUT
+press PAGE CONTROL NEXT
+snap C FUNCTION > VIDEO OUT > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > VIDEO OUT > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD G
+wait 0.5
+snap C FUNCTION > TALK SETTING
+press PAGE CONTROL NEXT
+snap C FUNCTION > TALK SETTING > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > TALK SETTING > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+snap C FUNCTION > UTILITY
+press PAGE CONTROL NEXT
+snap C FUNCTION > UTILITY > NEXT
+press PAGE CONTROL NEXT
+snap C FUNCTION > UTILITY > NEXT 2
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD A
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD B
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD C
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD D
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD F
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD G
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD C
+wait 0.5
+press LCD H
+wait 0.5
+snap C FUNCTION > CONTROLLER > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD A
+wait 0.5
+snap C FUNCTION > UTILITY > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD B
+wait 0.5
+snap C FUNCTION > UTILITY > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD C
+wait 0.5
+snap C FUNCTION > UTILITY > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD D
+wait 0.5
+snap C FUNCTION > UTILITY > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD F
+wait 0.5
+snap C FUNCTION > UTILITY > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD G
+wait 0.5
+snap C FUNCTION > UTILITY > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press FUNCTION
+wait 0.3
+press LCD H
+wait 0.5
+press LCD H
+wait 0.5
+snap C FUNCTION > UTILITY > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIXING CONSOLE
+wait 0.5
+snap C MIXING CONSOLE
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +1 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +2 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +3 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +4 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +5 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +6 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +7 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +8 (F)
+press LCD F
+wait 0.4
+snap C MIXING CONSOLE tab +9 (F)
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIXING CONSOLE
+wait 0.5
+press LCD A
+wait 0.4
+snap C MIXING CONSOLE tab -1 (A)
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.6
+snap C SONG SETUP
+press SONG SETUP
+wait 0.3
+press LCD A
+wait 0.6
+snap C SONG SETUP > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD B
+wait 0.6
+snap C SONG SETUP > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD C
+wait 0.6
+snap C SONG SETUP > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD D
+wait 0.6
+snap C SONG SETUP > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD E
+wait 0.6
+snap C SONG SETUP > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD F
+wait 0.6
+snap C SONG SETUP > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD G
+wait 0.6
+snap C SONG SETUP > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SONG SETUP
+wait 0.3
+press LCD H
+wait 0.6
+snap C SONG SETUP > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.6
+snap C DISK/SCSI
+press DISK/SCSI
+wait 0.3
+press LCD A
+wait 0.6
+snap C DISK/SCSI > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD B
+wait 0.6
+snap C DISK/SCSI > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD C
+wait 0.6
+snap C DISK/SCSI > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD D
+wait 0.6
+snap C DISK/SCSI > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD E
+wait 0.6
+snap C DISK/SCSI > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD F
+wait 0.6
+snap C DISK/SCSI > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD G
+wait 0.6
+snap C DISK/SCSI > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DISK/SCSI
+wait 0.3
+press LCD H
+wait 0.6
+snap C DISK/SCSI > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.6
+snap C MIDI
+press MIDI
+wait 0.3
+press LCD A
+wait 0.6
+snap C MIDI > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD B
+wait 0.6
+snap C MIDI > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD C
+wait 0.6
+snap C MIDI > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD D
+wait 0.6
+snap C MIDI > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD E
+wait 0.6
+snap C MIDI > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD F
+wait 0.6
+snap C MIDI > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD G
+wait 0.6
+snap C MIDI > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MIDI
+wait 0.3
+press LCD H
+wait 0.6
+snap C MIDI > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.6
+snap C SOUND CREATOR
+press SOUND CREATOR
+wait 0.3
+press LCD A
+wait 0.6
+snap C SOUND CREATOR > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD B
+wait 0.6
+snap C SOUND CREATOR > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD C
+wait 0.6
+snap C SOUND CREATOR > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD D
+wait 0.6
+snap C SOUND CREATOR > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD E
+wait 0.6
+snap C SOUND CREATOR > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD F
+wait 0.6
+snap C SOUND CREATOR > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD G
+wait 0.6
+snap C SOUND CREATOR > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press SOUND CREATOR
+wait 0.3
+press LCD H
+wait 0.6
+snap C SOUND CREATOR > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.6
+snap C DIGITAL RECORDING
+press DIGITAL RECORDING
+wait 0.3
+press LCD A
+wait 0.6
+snap C DIGITAL RECORDING > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD B
+wait 0.6
+snap C DIGITAL RECORDING > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD C
+wait 0.6
+snap C DIGITAL RECORDING > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD D
+wait 0.6
+snap C DIGITAL RECORDING > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD E
+wait 0.6
+snap C DIGITAL RECORDING > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD F
+wait 0.6
+snap C DIGITAL RECORDING > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD G
+wait 0.6
+snap C DIGITAL RECORDING > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DIGITAL RECORDING
+wait 0.3
+press LCD H
+wait 0.6
+snap C DIGITAL RECORDING > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.6
+snap C DEMO
+press DEMO
+wait 0.3
+press LCD A
+wait 0.6
+snap C DEMO > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD B
+wait 0.6
+snap C DEMO > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD C
+wait 0.6
+snap C DEMO > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD D
+wait 0.6
+snap C DEMO > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD E
+wait 0.6
+snap C DEMO > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD F
+wait 0.6
+snap C DEMO > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD G
+wait 0.6
+snap C DEMO > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press DEMO
+wait 0.3
+press LCD H
+wait 0.6
+snap C DEMO > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.6
+snap C MUSIC DATABASE
+press MUSIC DATABASE
+wait 0.3
+press LCD A
+wait 0.6
+snap C MUSIC DATABASE > LCD A
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD B
+wait 0.6
+snap C MUSIC DATABASE > LCD B
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD C
+wait 0.6
+snap C MUSIC DATABASE > LCD C
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD D
+wait 0.6
+snap C MUSIC DATABASE > LCD D
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD E
+wait 0.6
+snap C MUSIC DATABASE > LCD E
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD F
+wait 0.6
+snap C MUSIC DATABASE > LCD F
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD G
+wait 0.6
+snap C MUSIC DATABASE > LCD G
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+press MUSIC DATABASE
+wait 0.3
+press LCD H
+wait 0.6
+snap C MUSIC DATABASE > LCD H
+press EXIT
+press EXIT
+press EXIT
+wait 0.3
+quit

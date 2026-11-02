@@ -1,0 +1,545 @@
+press DIRECT ACCESS
+wait 0.3
+press MAIN A
+wait 0.6
+snap B MAIN A => Volume/EQ (Main)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MAIN B
+wait 0.6
+snap B MAIN B => Volume/EQ (Acmp)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MAIN C
+wait 0.6
+snap B MAIN C => Volume/EQ (Song 1-8)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MAIN D
+wait 0.6
+snap B MAIN D => Volume/EQ (Song 9-16)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FILL DOWN
+wait 0.6
+snap B FILL DOWN => Filter (Main)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FILL SELF
+wait 0.6
+snap B FILL SELF => Filter (Acmp)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FILL BREAK
+wait 0.6
+snap B FILL BREAK => Filter (Song 1-8)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FILL UP
+wait 0.6
+snap B FILL UP => Filter (Song 9-16)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press V.HARMONY MIC SETUP
+wait 0.6
+snap B V.HARMONY MIC SETUP => Effect Depth (Main)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press ENDING 1
+wait 0.6
+snap B ENDING 1 => Effect Depth (Main)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press ENDING 2
+wait 0.6
+snap B ENDING 2 => Effect Depth (Acmp)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press ENDING 3
+wait 0.6
+snap B ENDING 3 => Effect Depth (Song 1-8)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FADE IN/OUT
+wait 0.6
+snap B FADE IN/OUT => Effect Depth (Song 9-16)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press DSP(4-7)
+wait 0.6
+snap B DSP(4-7) => Effect Type
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press VOCAL HARMONY DSP(8)
+wait 0.6
+snap B VOCAL HARMONY DSP(8) => Effect Type (Mic)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press SLOW/FAST
+wait 0.6
+snap B SLOW/FAST => Effect Parameter
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press POLY/MONO
+wait 0.6
+snap B POLY/MONO => Tune (Portamento)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press UPPER OCTAVE +
+wait 0.6
+snap B UPPER OCTAVE + => Tune (Octave)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART ON/OFF RIGHT1
+wait 0.6
+snap B PART ON/OFF RIGHT1 => Tune (Tuning)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART ON/OFF RIGHT2
+wait 0.6
+snap B PART ON/OFF RIGHT2 => Tune (Tuning)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART ON/OFF RIGHT3
+wait 0.6
+snap B PART ON/OFF RIGHT3 => Tune (Tuning)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART ON/OFF LEFT
+wait 0.6
+snap B PART ON/OFF LEFT => Tune (Tuning)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press KBD TRANSPOSE +
+wait 0.6
+snap B KBD TRANSPOSE + => Tune (Transpose)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MIXING CONSOLE
+wait 0.6
+snap B MIXING CONSOLE => Master EQ
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MAIN MIXER
+wait 0.6
+snap B MAIN MIXER => Master EQ
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press INTRO 1
+wait 0.6
+snap B INTRO 1 => Master EQ
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART ON/OFF
+wait 0.6
+snap B PART ON/OFF => Voice selection
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press P.VOICE PIANO
+wait 0.6
+snap B P.VOICE PIANO => Voice selection
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press P.VOICE PERCUSSION
+wait 0.6
+snap B P.VOICE PERCUSSION => Voice selection
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press INTRO 2
+wait 0.6
+snap B INTRO 2 => Voice selection
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press INTRO 3
+wait 0.6
+snap B INTRO 3 => Line Out
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press SOUND CREATOR
+wait 0.6
+snap B SOUND CREATOR => Master Tuning
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MULTIPAD STOP
+wait 0.6
+snap B MULTIPAD STOP => Scale Tuning
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press AUTO ACCOMPANIMENT
+wait 0.6
+snap B AUTO ACCOMPANIMENT => Split Point/Fingering
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press LEFT HOLD
+wait 0.6
+snap B LEFT HOLD => Split Point/Fingering
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press TOUCH
+wait 0.6
+snap B TOUCH => Initial Touch
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press SUSTAIN
+wait 0.6
+snap B SUSTAIN => After Touch
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press KBD TRANSPOSE -
+wait 0.6
+snap B KBD TRANSPOSE - => Transpose Assign
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press REGIST 1
+wait 0.6
+snap B REGIST 1 => Registration
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press REGIST BANK +
+wait 0.6
+snap B REGIST BANK + => Registration
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press R.MEMORY FREEZE
+wait 0.6
+snap B R.MEMORY FREEZE => Freeze Group
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART SELECT RIGHT1
+wait 0.6
+snap B PART SELECT RIGHT1 => Voice Set R1
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART SELECT RIGHT2
+wait 0.6
+snap B PART SELECT RIGHT2 => Voice Set R2
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART SELECT RIGHT3
+wait 0.6
+snap B PART SELECT RIGHT3 => Voice Set R3
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PART SELECT LEFT
+wait 0.6
+snap B PART SELECT LEFT => Voice Set L
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press HARMONY/ECHO
+wait 0.6
+snap B HARMONY/ECHO => Harmony/Echo
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press DEMO
+wait 0.6
+snap B DEMO => Video monitor
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press VOCAL HARMONY TALK
+wait 0.6
+snap B VOCAL HARMONY TALK => Talk Setting
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FUNCTION
+wait 0.6
+snap B FUNCTION => AutoLoad/Speaker
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press P.VOICE XG
+wait 0.6
+snap B P.VOICE XG => Display Bank/PC
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press DIGITAL RECORDING
+wait 0.6
+snap B DIGITAL RECORDING => Metronome Vol for Rec
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MEMORY
+wait 0.6
+snap B MEMORY => Parameter Lock
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press TAP TEMPO
+wait 0.6
+snap B TAP TEMPO => Tap Count
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PAGE CONTROL BACK
+wait 0.6
+snap B PAGE CONTROL BACK => Auto Exit Time
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press PAGE CONTROL NEXT
+wait 0.6
+snap B PAGE CONTROL NEXT => Language
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press 8 BEAT
+wait 0.6
+snap B 8 BEAT => Style Manager menu
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press FLASH STYLE 1
+wait 0.6
+snap B FLASH STYLE 1 => Load Style into Flash
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press DISKDIRECT
+wait 0.6
+snap B DISKDIRECT => Dir select (style)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press SONG FILE DIRECTORY 1
+wait 0.6
+snap B SONG FILE DIRECTORY 1 => Dir select (song)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press SONG SETUP
+wait 0.6
+snap B SONG SETUP => Dir select (song)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press SONG PLAYER
+wait 0.6
+snap B SONG PLAYER => Dir select (song)
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MULTIPAD 1
+wait 0.6
+snap B MULTIPAD 1 => Multi Pad repeat
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MULTIPAD +
+wait 0.6
+snap B MULTIPAD + => Multi Pad chord match
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press DISK/SCSI
+wait 0.6
+snap B DISK/SCSI => Load disk to flash
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MIDI
+wait 0.6
+snap B MIDI => MIDI clock
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press VOCAL HARMONY (9)
+wait 0.6
+snap B VOCAL HARMONY (9) => VH parameters
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press V.HARMONY SELECT
+wait 0.6
+snap B V.HARMONY SELECT => VH parameters
+press EXIT
+press EXIT
+press EXIT
+press DIRECT ACCESS
+wait 0.3
+press MUSIC DATABASE
+wait 0.6
+snap B MUSIC DATABASE => Music Database search
+press EXIT
+press EXIT
+press EXIT
+quit
