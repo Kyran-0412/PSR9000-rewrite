@@ -77,6 +77,8 @@ private:
 	u8 m_scsi[32] = {};              // simulated SCSI controller registers (0xa80000 + 4*r + 3)
 	emu_timer *m_scsi_timer = nullptr;
 	TIMER_CALLBACK_MEMBER(scsi_timeout);
+	emu_timer *m_lcd_timer = nullptr;
+	TIMER_CALLBACK_MEMBER(lcd_pulse);
 	void update_irq0();
 	void fdc_irq_w(int state) { m_fdc_irq = state; update_irq0(); }
 	u16 pf_r() { return 0xff3f | (m_fdc_irq ? 0 : 0x80) | (m_scsi_irq ? 0 : 0x40); }
@@ -162,6 +164,11 @@ void psr9000_state::init_psr9000()
 void psr9000_state::machine_start()
 {
 	m_scsi_timer = timer_alloc(FUNC(psr9000_state::scsi_timeout), this);
+	// The LCD copy is paced by falling edges on TIOC0C (MTU0 TGRC input capture): one
+	// 20-byte DMA chunk per edge. Source not identified yet (probably a line pulse from
+	// the display side); 64 us is a guess at a typical line period.
+	m_lcd_timer = timer_alloc(FUNC(psr9000_state::lcd_pulse), this);
+	m_lcd_timer->adjust(attotime::from_usec(64), 0, attotime::from_usec(64));
 	// NOTE reg 11 low 3 bits = SCSI bus phase (0x31D7DC). The early probe loop (0x31E14E, called
 	// from 0x315BE8 before the driver's state 0x12BB1C4 is set by 0x31E978) only ends on phase 1
 	// (but then the driver assumes a device and sends INQUIRY) or a completed selection timeout
@@ -325,6 +332,11 @@ void psr9000_state::scsi_w(offs_t offset, u8 data)
 	m_scsi[offset] = data;
 	if(offset == 20) // the real selection timeout takes ~250ms; the driver arms its state after this write
 		m_scsi_timer->adjust(attotime::from_msec(250));
+}
+
+TIMER_CALLBACK_MEMBER(psr9000_state::lcd_pulse)
+{
+	m_maincpu->mtu_input_capture(0, 2);
 }
 
 TIMER_CALLBACK_MEMBER(psr9000_state::scsi_timeout)

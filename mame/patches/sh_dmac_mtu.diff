@@ -1,0 +1,172 @@
+diff --git a/src/devices/cpu/sh/sh7042.cpp b/src/devices/cpu/sh/sh7042.cpp
+index 9fef06c6..f460221e 100644
+--- a/src/devices/cpu/sh/sh7042.cpp
++++ b/src/devices/cpu/sh/sh7042.cpp
+@@ -263,7 +263,15 @@ void sh7042_device::map(address_map &map)
+ 	map(0xffff862c, 0xffff862d).rw(m_bsc, FUNC(sh_bsc_device::rtcsr_r), FUNC(sh_bsc_device::rtcsr_w));
+ 	map(0xffff862e, 0xffff862f).rw(m_bsc, FUNC(sh_bsc_device::rtcnt_r), FUNC(sh_bsc_device::rtcnt_w));
+ 	map(0xffff8630, 0xffff8631).rw(m_bsc, FUNC(sh_bsc_device::rtcor_r), FUNC(sh_bsc_device::rtcor_w));
+-	map(0xffff86b0, 0xffff86b1).rw(m_dmac, FUNC(sh_dmac_device::dmaor_r), FUNC(sh_dmac_device::dmaor_w));
++	// Firmware (Yamaha PSR-9000) sets DMAOR with a longword write of 1: take the low word then
++	map(0xffff86b0, 0xffff86b3).lrw32(
++		NAME([this](offs_t, u32 mem_mask) -> u32 { return u32(m_dmac->dmaor_r()) << 16; }),
++		NAME([this](offs_t, u32 data, u32 mem_mask) {
++			if(mem_mask == 0xffffffff)
++				m_dmac->dmaor_w(0, data & 0xffff, 0xffff);
++			else if(mem_mask & 0xffff0000)
++				m_dmac->dmaor_w(0, data >> 16, mem_mask >> 16);
++		}));
+ 	map(0xffff86c0, 0xffff86c3).rw(m_dmac0, FUNC(sh_dmac_channel_device::sar_r), FUNC(sh_dmac_channel_device::sar_w));
+ 	map(0xffff86c4, 0xffff86c7).rw(m_dmac0, FUNC(sh_dmac_channel_device::dar_r), FUNC(sh_dmac_channel_device::dar_w));
+ 	map(0xffff86c8, 0xffff86cb).rw(m_dmac0, FUNC(sh_dmac_channel_device::dmatcr_r), FUNC(sh_dmac_channel_device::dmatcr_w));
+@@ -356,6 +364,12 @@ void sh7042_device::device_add_mconfig(machine_config &config)
+ 
+ }
+ 
++void sh7042_device::mtu_input_capture(int channel, int tgr)
++{
++	sh_mtu_channel_device *ch[5] = { m_mtu0, m_mtu1, m_mtu2, m_mtu3, m_mtu4 };
++	ch[channel]->input_capture(tgr);
++}
++
+ void sh7042_device::internal_update()
+ {
+ 	internal_update(current_cycles());
+diff --git a/src/devices/cpu/sh/sh7042.h b/src/devices/cpu/sh/sh7042.h
+index dbe2b32f..e2395195 100644
+--- a/src/devices/cpu/sh/sh7042.h
++++ b/src/devices/cpu/sh/sh7042.h
+@@ -46,6 +46,7 @@ public:
+ 	auto read_portf()  { return m_read_port16 [3].bind(); }
+ 
+ 	void internal_update();
++	void mtu_input_capture(int channel, int tgr);
+ 	u16 do_read_adc(int port) { return m_read_adc[port](); }
+ 	u16 do_read_port16(int port) { return m_read_port16[port](); }
+ 	void do_write_port16(int port, u16 data, u16 ddr) { m_write_port16[port](0, data, ddr); }
+diff --git a/src/devices/cpu/sh/sh_dmac.cpp b/src/devices/cpu/sh/sh_dmac.cpp
+index 39775445..d34880fa 100644
+--- a/src/devices/cpu/sh/sh_dmac.cpp
++++ b/src/devices/cpu/sh/sh_dmac.cpp
+@@ -33,7 +33,6 @@ void sh_dmac_device::device_reset()
+ 
+ u16 sh_dmac_device::dmaor_r()
+ {
+-	logerror("dmaor_r\n");
+ 	return m_dmaor;
+ }
+ 
+@@ -41,6 +40,11 @@ void sh_dmac_device::dmaor_w(offs_t, u16 data, u16 mem_mask)
+ {
+ 	COMBINE_DATA(&m_dmaor);
+ 	logerror("dmaor_w %04x\n", m_dmaor);
++	for(int i = 0; i != 4; i++) {
++		auto *ch = subdevice<sh_dmac_channel_device>(util::string_format("%d", i));
++		if(ch)
++			ch->check_start();
++	}
+ }
+ 
+ sh_dmac_channel_device::sh_dmac_channel_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+@@ -104,7 +108,6 @@ void sh_dmac_channel_device::dmatcr_w(offs_t, u32 data, u32 mem_mask)
+ 
+ u32 sh_dmac_channel_device::chcr_r()
+ {
+-	logerror("chcr_r\n");
+ 	return m_chcr;
+ }
+ 
+@@ -112,4 +115,41 @@ void sh_dmac_channel_device::chcr_w(offs_t, u32 data, u32 mem_mask)
+ {
+ 	COMBINE_DATA(&m_chcr);
+ 	logerror("chcr_w %08x\n", m_chcr);
++	check_start();
++}
++
++// Auto-request transfers only (RS = 0100): done at once, then TE is set and DEI raised
++void sh_dmac_channel_device::check_start()
++{
++	auto *dmac = downcast<sh_dmac_device *>(owner());
++	if(!BIT(m_chcr, 0) || BIT(m_chcr, 1) || (dmac->dmaor() & 7) != 1)
++		return;
++	int rs = (m_chcr >> 8) & 15;
++	if(rs != 4) {
++		logerror("unsupported request source %x\n", rs);
++		return;
++	}
++	address_space &space = m_cpu->space(AS_PROGRAM);
++	int ts = (m_chcr >> 3) & 3;
++	int size = ts == 0 ? 1 : ts == 1 ? 2 : 4;
++	int sm = (m_chcr >> 12) & 3;
++	int dm = (m_chcr >> 14) & 3;
++	u32 count = m_dmatcr & 0xffffff;
++	if(!count)
++		count = 0x1000000;
++	for(u32 i = 0; i != count; i++) {
++		switch(size) {
++		case 1: space.write_byte(m_dar, space.read_byte(m_sar)); break;
++		case 2: space.write_word(m_dar, space.read_word(m_sar)); break;
++		default: space.write_dword(m_dar, space.read_dword(m_sar)); break;
++		}
++		if(sm == 1) m_sar += size; else if(sm == 2) m_sar -= size;
++		if(dm == 1) m_dar += size; else if(dm == 2) m_dar -= size;
++	}
++	m_dmatcr = 0;
++	m_chcr |= 2;
++	if(BIT(m_chcr, 2)) {
++		int index = tag()[strlen(tag())-1] - '0';
++		m_intc->internal_interrupt(72 + 4*index);
++	}
+ }
+diff --git a/src/devices/cpu/sh/sh_dmac.h b/src/devices/cpu/sh/sh_dmac.h
+index 3c8436df..96c08e97 100644
+--- a/src/devices/cpu/sh/sh_dmac.h
++++ b/src/devices/cpu/sh/sh_dmac.h
+@@ -31,6 +31,7 @@ public:
+ 
+ 	u16 dmaor_r();
+ 	void dmaor_w(offs_t, u16 data, u16 mem_mask);
++	u16 dmaor() const { return m_dmaor; }
+ 
+ 
+ protected:
+@@ -62,6 +63,7 @@ public:
+ 	void dmatcr_w(offs_t, u32 data, u32 mem_mask);
+ 	u32 chcr_r();
+ 	void chcr_w(offs_t, u32 data, u32 mem_mask);
++	void check_start();
+ 
+ protected:
+ 	required_device<sh7042_device> m_cpu;
+diff --git a/src/devices/cpu/sh/sh_mtu.cpp b/src/devices/cpu/sh/sh_mtu.cpp
+index 532a47da..997fba93 100644
+--- a/src/devices/cpu/sh/sh_mtu.cpp
++++ b/src/devices/cpu/sh/sh_mtu.cpp
+@@ -527,3 +527,15 @@ void sh_mtu_channel_device::update_counter(u64 cur_time)
+ 		exit(1);
+ 	}
+ }
++
++// External edge on TIOCnX configured as input capture (edge selection left to the caller)
++void sh_mtu_channel_device::input_capture(int tgr)
++{
++	if(tgr >= m_tgr_count)
++		return;
++	m_cpu->internal_update();
++	m_tgr[tgr] = m_tcnt;
++	m_tsr |= 1 << tgr;
++	if(BIT(m_tier, tgr) && m_interrupt[tgr] != -1)
++		m_intc->internal_interrupt(m_interrupt[tgr]);
++}
+diff --git a/src/devices/cpu/sh/sh_mtu.h b/src/devices/cpu/sh/sh_mtu.h
+index 7d1a9be9..829c3d27 100644
+--- a/src/devices/cpu/sh/sh_mtu.h
++++ b/src/devices/cpu/sh/sh_mtu.h
+@@ -105,6 +105,7 @@ public:
+ 
+ 	void set_enable(bool enable);
+ 	u64 internal_update(u64 current_time);
++	void input_capture(int tgr);
+ 
+ protected:
+ 	required_device<sh7042_device> m_cpu;
