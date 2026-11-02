@@ -59,7 +59,9 @@ LCD 2-4 = R1/R2/R3 (selecting one gives the dial back to the controls), LCD 5-7 
 BRIGHT / REVERB (LCD 7 DOWN = reverb on/off), LCD 8 free.
 
 ## KyranOS boot splash (mod v7)
-mockups/splash_v1.py draws it (3D title with a dithered extrusion, faint dithered glow, retro
+CURRENT: mockups/splash_v2.py = Kyran's own logo (mockups/splash_kyran_source.webp) scaled to
+320x240 and thresholded (yellow -> light pixels), ~2 KB compressed.
+First version: mockups/splash_v1.py drew it (3D title with a dithered extrusion, faint dithered glow, retro
 perspective floor) and encodes it in Yamaha's compressed image format (~5 KB, round-trip
 checked). The boot code draws the stock splash with 0x10ABCA(fb, pixels, rect 0x3257B4, 2) at
 0x25FAE; the pixel pointer literal at 0x26010 now points to our data right after the mod code.

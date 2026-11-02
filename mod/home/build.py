@@ -133,9 +133,9 @@ def main():
     if end > LIMIT:
         sys.exit('error: mod too big (%x > %x)' % (end, LIMIT))
 
-    # boot splash (mockups/splash_v1.py): our image in Yamaha's compressed format, right
+    # boot splash (mockups/splash_v2.py: Kyran's logo): our image in Yamaha's compressed format, right
     # after the code; the boot code's pointer to the stock splash pixels (0x26010) is changed
-    run(sys.executable, os.path.join(ROOT, 'mockups', 'splash_v1.py'), OUT)
+    run(sys.executable, os.path.join(ROOT, 'mockups', 'splash_v2.py'), OUT)
     splash = open(os.path.join(OUT, 'splash.bin'), 'rb').read()
     splash_at = (end + 3) & ~3
     end = splash_at + len(splash)

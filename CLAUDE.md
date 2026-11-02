@@ -20,7 +20,8 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    the previous level). Slot 8 left empty for later. NOT octave/transpose (own panel buttons).
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
-5. Boot splash: KyranOS (mockups/splash_v1.py), DONE in the mod.
+5. Boot splash: KyranOS, Kyran's own logo (mockups/splash_v2.py + splash_kyran_source.webp),
+   DONE in the mod (v1 generated design kept in splash_v1.py).
 6. More later.
 Current layout: mockups/home_v6.py (= v5 + Yamaha-style blue status bar with yellow text and the
 stock transpose/octave icons, metronome icon under TEMPO; v5 = v4 + TEMPO box on LCD 1,
