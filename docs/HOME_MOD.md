@@ -58,6 +58,13 @@ LCD 1 = TEMPO box (shows the BPM; selected: the dial changes tempo, header "TEMP
 LCD 2-4 = R1/R2/R3 (selecting one gives the dial back to the controls), LCD 5-7 = VOLUME /
 BRIGHT / REVERB (LCD 7 DOWN = reverb on/off), LCD 8 free.
 
+## Flicker while turning the dial (fixed in mod v6)
+Drawing started while the previous frame was still being copied to the LCD (DMA, 20 bytes per
+step, ~30 ms per screen), so the LCD picked up a half-cleared screen about once a second.
+draw_screen now waits for the copy to finish (flag 0x10CB717; queue read/write indexes
+0x10CB715/0x10CB716). Measured over 240 frames of continuous dialing: before, 19 frames with
+up to 6900 changed pixels; after, none (largest change 127 pixels = the value itself).
+
 ## Old widgets flashing (fixed in mod v4)
 Stock widgets of the hidden home screen still redraw (e.g. transpose/octave) and sent their
 area to the LCD before we repainted. The graphics library's 16 pointers to the LCD refresh

@@ -38,6 +38,7 @@ typedef unsigned int u32;
 #define lcd_refresh  FW(0x10bf60, void (*)(u8 *fb, const short *rect))
 #define ui_flush_fn  FW(0x10bb0c, void (*)(void))
 #define FRAMEBUFFER  ((u8 *)0x10c8aec)
+#define LCD_BUSY     (*(volatile u8 *)0x10cb717)   /* 1 while the DMA copy to the LCD runs */
 /* Button table of whatever screen gets panel events right now: 0x3B152C = MAIN VOLUME page
  * (home screen, bottom panel page 1). */
 #define ACTIVE_TABLE (*(volatile u32 *)0x10ba718)
@@ -419,6 +420,15 @@ static int val(int p, int c, int op, int oc, int ov)
 	return (p == op && c == oc) ? ov : get_ctrl(p, c);
 }
 
+/* Wait until the previous frame has been copied to the LCD. Drawing while that copy runs
+ * lets the LCD pick up a half-cleared screen (the flicker while turning the dial). */
+static void wait_lcd_idle(void)
+{
+	int n = 2000000;                  /* safety limit, far more than one frame */
+	while(LCD_BUSY && --n)
+		;
+}
+
 static void draw_screen(int op, int oc, int ov)
 {
 	static const short rect[4] = { 0, 0, W, H };
@@ -429,6 +439,7 @@ static void draw_screen(int op, int oc, int ov)
 		copy_name(name[i], voice_name(i), 20);
 		on[i] = part_on(i) & 1;
 	}
+	wait_lcd_idle();
 	fill(0, 0, W - 1, H - 1, WT);
 
 	/* ---- status bar: Yamaha style, blue bar with yellow text and the stock icons ---- */
