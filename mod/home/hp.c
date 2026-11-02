@@ -1,14 +1,19 @@
-/* New home screen panel for the PSR-9000 (V3.06), replaces the MAIN VOLUME page drawing.
+/* New home screen for the PSR-9000 (V3.06): the agreed design, mockups/home_v3.py.
  *
- * LCD 1-3 (UP or DOWN) select the part R1/R2/R3.
- * LCD 4-6 select the control VOLUME / BRIGHT / REVERB; LCD 6 DOWN switches reverb off and
- * back on (restoring the previous level). LCD 7-8 are free for later.
- * The DATA DIAL changes the selected control of the selected part while this panel is
- * showing; everywhere else it still does what it did before (tempo, lists, ...).
+ *   status line : style name ............................ (140 BPM)(TRP 0)(OCT 0)
+ *   layers      : R1/R2/R3 cards with voice name, VOL/BRT (filled = on, dashed = off),
+ *                 arrow at the selected part; LEFT voice line below
+ *   bottom row  : LCD 1-3 = part R1/R2/R3 (ON/OFF + short name under each),
+ *                 LCD 4-6 = VOLUME / BRIGHT / REVERB of the selected part, LCD 7-8 free.
+ *                 DATA DIAL changes the selected control; LCD 6 DOWN switches reverb
+ *                 off/on (restoring the previous level).
+ *
+ * The whole 320x240 screen is drawn here while the home screen is active (the stock home
+ * screen keeps running underneath; whenever it draws something we draw over it again).
  *
  * Built with an SH-4 compiler in no-FPU mode; build.py rejects any instruction the SH-2
- * does not have. Rules for this file: no division/modulo except by constants, no variable
- * shifts (use the bit tables), no libc.
+ * does not have and any library call. Rules: no division/modulo, no variable shifts
+ * (shr/shl below), no writable globals (state is in spare DMA registers).
  */
 #include "font.h"
 
@@ -22,7 +27,13 @@ typedef unsigned int u32;
 #define get_volume   FW(0x50c18, int (*)(int part))
 #define get_bright   FW(0x50cd4, int (*)(int part))
 #define get_reverb   FW(0x50cf0, int (*)(int part))
-#define lcd_refresh  FW(0x10bf60, void (*)(u8 *fb, const short *rect))
+#define voice_name   FW(0x3fff4, const char *(*)(int part))   /* part 0-2 = R1-R3, 3 = LEFT */
+#define part_on      FW(0x40048, int (*)(int part))
+#define get_tempo    FW(0x904ce, int (*)(void))
+#define get_transpose FW(0x51388, int (*)(void))               /* signed byte */
+#define get_octave   FW(0x4005e, int (*)(void))                /* 0..2 = -1..+1 */
+#define STYLE_NAME   (*(const char *volatile *)0x108f098)      /* set by the stock home screen */
+#define lcd_refresh  FW(0x10bf60, int (*)(u8 *fb, const short *rect))   /* 0 = queued */
 #define ui_flush_fn  FW(0x10bb0c, void (*)(void))
 #define FRAMEBUFFER  ((u8 *)0x10c8aec)
 /* Button table of whatever screen gets panel events right now: 0x3B152C = MAIN VOLUME page
@@ -30,6 +41,7 @@ typedef unsigned int u32;
 #define ACTIVE_TABLE (*(volatile u32 *)0x10ba718)
 #define HOME_TABLE   0x3b152c
 #define FLUSH_FLAG   (*(volatile u8 *)0x101de57)
+#define REPAINT_ALL  (*(volatile u8 *)0x101de56)   /* UI flush: 1 = redraw the whole stock screen */
 
 extern int orig_tempo_dial(int amount, int dir);   /* tramp.S: the old dial handler */
 
@@ -52,18 +64,25 @@ static inline u32 shl(u32 v, int n)
 	return v;
 }
 static inline u32 rotl1(u32 v) { __asm__("rotl %0" : "+r"(v) : : "t"); return v; }
-
+static inline int mul(int a, int b)   /* forced mul.l: the compiler may turn constant multiplies into SH-4 shifts */
+{
+	int r;
+	__asm__("mul.l %1,%2\n\tsts macl,%0" : "=r"(r) : "r"(a), "r"(b) : "macl");
+	return r;
+}
+static int half(int v) { return v < 0 ? -(int)shr(-v, 1) : (int)shr(v, 1); }
 
 /* ---- state ----
- * The firmware has no spare RAM we know of, so the state lives in the address registers of
- * DMA channel 3, which the firmware never uses (no reference to 0xFFFF86F0-0xFFFF86FF):
- *   SAR3 = checksum of the panel area right after we drew it
- *   DAR3 = [31..24] magic 0x5A, [23] dirty, [22..21] part, [20..19] control,
- *          [18..0] unused; saved reverb levels are kept in the firmware itself (see below)
- * On power-up DAR3 holds garbage, so the magic byte tells us to start fresh.
+ * No spare RAM is known, so the state lives in the address registers of DMA channel 3,
+ * which the firmware never uses (no reference to 0xFFFF86F0-0xFFFF86FF):
+ *   SAR3    = checksum of the screen (and values) right after we drew it
+ *   DAR3    = [31..24] magic 0x5A, [23] dirty, [22..21] part, [20..19] control, [18] shown
+ *   DMATCR3 = reverb level to restore, 8 bits per part (24-bit register)
+ * On power-up the registers hold garbage, so the magic byte tells us to start fresh.
  */
 #define SAR3 (*(volatile u32 *)0xffff86f0)
 #define DAR3 (*(volatile u32 *)0xffff86f4)
+#define DMATCR3 (*(volatile u32 *)0xffff86f8)
 
 static u32 st(void)
 {
@@ -71,6 +90,7 @@ static u32 st(void)
 	if(shr(v, 24) != 0x5a) {
 		v = 0x5a800000u;        /* R1, VOLUME, dirty */
 		DAR3 = v;
+		DMATCR3 = 0;
 	}
 	return v;
 }
@@ -80,11 +100,9 @@ static void set_sel(int part, int ctrl) { DAR3 = (st() & ~0x00780000u) | shl(par
 static void set_dirty(void) { DAR3 = st() | 0x800000u; }
 static int dirty(void) { return shr(st(), 23) & 1; }
 static void clear_dirty(void) { DAR3 = st() & ~0x800000u; }
-
-/* Reverb level to restore when switching reverb back on, per part. 7 bits each would not
- * fit next to the selection, so it goes in DMATCR3 (24 bits, also unused). */
-#define DMATCR3 (*(volatile u32 *)0xffff86f8)
-static u32 part_shift(u32 v, int part)   /* v << (8 * part) without a variable shift */
+static int shown(void) { return shr(st(), 18) & 1; }
+static void set_shown(int on) { DAR3 = on ? (st() | 0x40000u) : (st() & ~0x40000u); }
+static u32 part_shift(u32 v, int part)
 {
 	if(part == 1) return shl(v, 8);
 	if(part == 2) return shl(v, 16);
@@ -102,16 +120,18 @@ static void set_reverb_saved(int part, int v)
 	DMATCR3 = (DMATCR3 & ~part_shift(0xff, part)) | part_shift(v & 0x7f, part);
 }
 
-#define PANEL_Y 154
-#define PANEL_H 86
-
-static const u8 bit[8] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
-
 /* ---- drawing into the 320x240 1-bit framebuffer (bit set = dark) ---- */
+#define W 320
+#define H 240
+#define K 1      /* dark */
+#define WT 0     /* light */
+static const u8 bit[8] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
+static const u8 lmask[8] = { 0xff, 0x7f, 0x3f, 0x1f, 0x0f, 0x07, 0x03, 0x01 };
+
 static void px(int x, int y, int on)
 {
 	u8 *p;
-	if(x < 0 || x >= 320 || y < 0 || y >= 240)
+	if(x < 0 || x >= W || y < 0 || y >= H)
 		return;
 	p = FRAMEBUFFER + y * 40 + shr(x, 3);
 	if(on)
@@ -120,57 +140,75 @@ static void px(int x, int y, int on)
 		*p &= ~bit[x & 7];
 }
 
-/* fill a rectangle a byte at a time where possible */
-static const u8 lmask[8] = { 0xff, 0x7f, 0x3f, 0x1f, 0x0f, 0x07, 0x03, 0x01 };
-static void fill(int x0, int y0, int w, int h, int on)
+/* horizontal span x0..x1 inclusive, a byte at a time */
+static void hspan(int x0, int x1, int y, int on)
 {
-	int x1 = x0 + w, y, b0, b1, b;
-	u8 m0, m1;
-	if(w <= 0 || h <= 0)
-		return;
+	int b0, b1, b;
+	u8 *row;
+	if(y < 0 || y >= H) return;
+	if(x0 < 0) x0 = 0;
+	if(x1 >= W) x1 = W - 1;
+	if(x1 < x0) return;
+	row = FRAMEBUFFER + y * 40;
 	b0 = shr(x0, 3);
-	b1 = shr(x1 - 1, 3);
-	m0 = lmask[x0 & 7];
-	m1 = ~lmask[((x1 - 1) & 7) + 1 > 7 ? 0 : ((x1 - 1) & 7) + 1];
-	if(((x1 - 1) & 7) == 7)
-		m1 = 0xff;
-	for(y = y0; y < y0 + h; y++) {
-		u8 *row = FRAMEBUFFER + y * 40;
-		for(b = b0; b <= b1; b++) {
-			u8 m = 0xff;
-			if(b == b0) m &= m0;
-			if(b == b1) m &= m1;
-			if(on) row[b] |= m; else row[b] &= ~m;
+	b1 = shr(x1, 3);
+	for(b = b0; b <= b1; b++) {
+		u8 m = 0xff;
+		if(b == b0) m &= lmask[x0 & 7];
+		if(b == b1 && (x1 & 7) != 7) m &= ~lmask[(x1 & 7) + 1];
+		if(on) row[b] |= m; else row[b] &= ~m;
+	}
+}
+
+static void fill(int x0, int y0, int x1, int y1, int on)   /* inclusive corners */
+{
+	int y;
+	for(y = y0; y <= y1; y++)
+		hspan(x0, x1, y, on);
+}
+
+/* inset of a rounded corner at row dy (0 = outermost row) for radius r, like PIL */
+static int corner_inset(int r, int dy)
+{
+	int d = r - dy, dx = r;
+	/* largest dx with dx^2 + d^2 <= r^2 (+r for a softer edge) */
+	while(dx > 0 && dx * dx + d * d > r * r + r)
+		dx--;
+	return r - dx;
+}
+
+/* PIL rounded_rectangle((x0,y0,x1,y1), r, fill/outline) */
+static void rrect(int x0, int y0, int x1, int y1, int r, int filled, int on)
+{
+	int y, h = y1 - y0 + 1;
+	if(r * 2 > h) r = half(h);
+	if(r * 2 > x1 - x0 + 1) r = half(x1 - x0 + 1);
+	for(y = y0; y <= y1; y++) {
+		int dy = y - y0, inset = 0;
+		if(dy < r) inset = corner_inset(r, dy);
+		else if(y1 - y < r) inset = corner_inset(r, y1 - y);
+		if(filled)
+			hspan(x0 + inset, x1 - inset, y, on);
+		else if(y == y0 || y == y1)
+			hspan(x0 + inset, x1 - inset, y, on);
+		else {
+			/* side pixels, including the curve steps */
+			int nin = inset;
+			if(dy < r && dy + 1 <= r) nin = corner_inset(r, dy + 1);
+			if(y1 - y < r && y1 - y - 1 >= 0) nin = corner_inset(r, y1 - y - 1);
+			if(nin > inset) nin = inset;
+			hspan(x0 + nin, x0 + inset, y, on);
+			hspan(x1 - inset, x1 - nin, y, on);
 		}
 	}
 }
 
-/* rounded rectangle, filled or outline */
-static void rrect(int x0, int y0, int w, int h, int r, int filled, int on)
+/* mockup dashed_box: dots every 4 px, 6 px in from the corners */
+static void dashed_box(int x0, int y0, int x1, int y1)
 {
 	int x, y;
-	for(y = 0; y < h; y++) {
-		int inset = 0;
-		if(y < r)
-			inset = r - y;
-		else if(y >= h - r)
-			inset = y - (h - r - 1);
-		if(inset > r)
-			inset = r;
-		/* corner shape: 2 px radius looks round enough at this size */
-		for(x = inset; x < w - inset; x++) {
-			int edge = (y == 0 || y == h - 1 || x == inset || x == w - inset - 1);
-			if(filled || edge)
-				px(x0 + x, y0 + y, on);
-		}
-	}
-}
-
-static void dashed_rect(int x0, int y0, int w, int h)
-{
-	int i;
-	for(i = 2; i < w - 2; i += 3) { px(x0 + i, y0, 1); px(x0 + i, y0 + h - 1, 1); }
-	for(i = 2; i < h - 2; i += 3) { px(x0, y0 + i, 1); px(x0 + w - 1, y0 + i, 1); }
+	for(x = x0 + 6; x < x1 - 5; x += 4) { px(x, y0, K); px(x, y1, K); }
+	for(y = y0 + 6; y < y1 - 5; y += 4) { px(x0, y, K); px(x1, y, K); }
 }
 
 static const glyph_t *find_glyph(const font_t *f, char c)
@@ -192,9 +230,12 @@ static int text_width(const font_t *f, const char *s)
 	return w;
 }
 
-/* draws s with its top-left at (x, y); on = 1 dark, 0 light */
-static void text(const font_t *f, int x, int y, const char *s, int on)
+/* anchor like PIL: h = 'l' left, 'm' middle, 'r' right; vertical is always 'm' */
+static void text(int x, int y, const char *s, const font_t *f, int on, char h)
 {
+	int base = y + f->mid;
+	if(h == 'm') x -= half(text_width(f, s));
+	else if(h == 'r') x -= text_width(f, s);
 	for(; *s; s++) {
 		const glyph_t *g = find_glyph(f, *s);
 		int gx, gy;
@@ -206,29 +247,51 @@ static void text(const font_t *f, int x, int y, const char *s, int on)
 			const u8 *row = f->bits + g->offset + gy * g->stride;
 			for(gx = 0; gx < g->w; gx++)
 				if(row[shr(gx, 3)] & bit[gx & 7])
-					px(x + g->x + gx, y + g->y + gy, on);
+					px(x + g->x + gx, base + g->y + gy, on);
 		}
 		x += g->advance;
 	}
 }
 
-static void text_c(const font_t *f, int cx, int y, const char *s, int on)
-{
-	text(f, cx - (int)shr(text_width(f, s), 1), y, s, on);
-}
+/* ---- small string helpers (no libc) ---- */
+static char *cat(char *d, const char *s) { while(*s) *d++ = *s++; *d = 0; return d; }
 
-static void number(char *buf, int v, int sign)
+static char *num(char *d, int v, int sign)
 {
 	static const short pow10[3] = { 100, 10, 1 };
 	int i, started = 0;
-	if(v < 0) { *buf++ = '-'; v = -v; }
-	else if(sign && v > 0) *buf++ = '+';
+	if(v < 0) { *d++ = '-'; v = -v; }
+	else if(sign && v > 0) *d++ = '+';
 	for(i = 0; i < 3; i++) {
-		char d = '0';
-		while(v >= pow10[i]) { v -= pow10[i]; d++; }
-		if(d != '0' || started || i == 2) { *buf++ = d; started = 1; }
+		char c = '0';
+		while(v >= pow10[i]) { v -= pow10[i]; c++; }
+		if(c != '0' || started || i == 2) { *d++ = c; started = 1; }
 	}
-	*buf = 0;
+	*d = 0;
+	return d;
+}
+
+/* voice name, trailing spaces removed */
+static void copy_name(char *d, const char *s, int max)
+{
+	int n = 0;
+	if(!s) s = "";
+	while(s[n] && n < max) { d[n] = s[n]; n++; }
+	while(n && d[n - 1] == ' ') n--;
+	d[n] = 0;
+}
+
+static void upper(char *s) { for(; *s; s++) if(*s >= 'a' && *s <= 'z') *s -= 32; }
+
+/* last word, at most 6 letters (mockup: name.split()[-1][:6]) */
+static void short_name(char *d, const char *name)
+{
+	const char *w = name, *p;
+	int n = 0;
+	for(p = name; *p; p++)
+		if(*p == ' ' && p[1]) w = p + 1;
+	while(w[n] && n < 6) { d[n] = w[n]; n++; }
+	d[n] = 0;
 }
 
 /* ---- parameters ---- */
@@ -236,7 +299,7 @@ static int get_ctrl(int part, int ctrl)
 {
 	switch(ctrl) {
 	case 0: return get_volume(part);
-	case 1: return get_bright(part);   /* 0..127 like the Mixing Console FILT page */
+	case 1: return get_bright(part);
 	default: return get_reverb(part);
 	}
 }
@@ -245,106 +308,172 @@ static void set_ctrl(int part, int ctrl, int value)
 {
 	static const u8 id[3] = { 5, 10, 11 };   /* VOLUME, BRIGHTNESS, REVERB SEND (category 2) */
 	u8 data[2];
-	if(value < 0)
-		value = 0;
-	if(value > 127)
-		value = 127;
+	if(value < 0) value = 0;
+	if(value > 127) value = 127;
 	data[0] = part;
 	data[1] = value;
 	post_param(2, id[ctrl], 2, data);
 }
 
-static void value_text(char *buf, int ctrl, int v)
-{
-	if(ctrl == 2 && v == 0) {
-		buf[0] = 'O'; buf[1] = 'F'; buf[2] = 'F'; buf[3] = 0;
-	} else
-		number(buf, v, 0);
-}
-
-/* ---- the panel ---- */
-static const char *const part_name[3] = { "R1", "R2", "R3" };
+/* ---- the screen ---- */
+static const char *const part_label[3] = { "R1", "R2", "R3" };
 static const char *const ctrl_name[3] = { "VOLUME", "BRIGHT", "REVERB" };
 
-/* all 9 values, so a change made by another task (or a registration recall) shows up */
+/* everything shown on screen, so a change made elsewhere (other task, registration recall,
+ * part buttons, voice select) triggers a redraw */
 static u32 values_sig(void)
 {
 	u32 s = 0;
 	int p, c;
-	for(p = 0; p < 3; p++)
+	const char *n;
+	for(p = 0; p < 3; p++) {
 		for(c = 0; c < 3; c++)
 			s = rotl1(rotl1(rotl1(s))) ^ (u32)(get_ctrl(p, c) & 0xff);
+		s = rotl1(s) ^ (u32)(part_on(p) & 1) ^ (u32)voice_name(p);
+	}
+	s ^= (u32)voice_name(3);
+	n = STYLE_NAME;
+	s = rotl1(s) ^ (u32)n ^ (u32)get_tempo() ^ shl(get_transpose() & 0xff, 8) ^ shl(get_octave() & 3, 16);
 	return s;
 }
 
-static u32 panel_sum(void)
+static u32 screen_sum(void)
 {
-	const u32 *p = (const u32 *)(FRAMEBUFFER + PANEL_Y * 40);
+	const u32 *p = (const u32 *)FRAMEBUFFER;
 	u32 s = 0;
 	int i;
-	for(i = 0; i < PANEL_H * 10; i++)
+	for(i = 0; i < H * 10; i++)
 		s = rotl1(s) ^ p[i];
 	return s;
 }
 
-static void draw_card(int col, const char *label, const char *val, int level, int selected, int empty)
+/* op/oc/ov: a value we just sent that the firmware may not have applied yet (op < 0: none) */
+static int val(int p, int c, int op, int oc, int ov)
 {
-	int x = col * 40 + 1, y = PANEL_Y + 14, w = 38, h = 70;
-	int fg = selected ? 0 : 1;
-	if(empty) {
-		dashed_rect(x, y, w, h);
-		return;
-	}
-	rrect(x, y, w, h, 3, selected, 1);
-	text_c(&font_big, x + 19, y + 14, val, fg);
-	if(level >= 0) {           /* thin level bar */
-		int bw = shr(level * 28 + 64, 7);
-		if(bw < 0) bw = 0;
-		rrect(x + 5, y + 40, 28, 5, 1, 0, fg);
-		fill(x + 6, y + 41, bw > 26 ? 26 : bw, 3, fg);
-	}
-	text_c(&font_small, x + 19, y + h - 13, label, fg);
+	return (p == op && c == oc) ? ov : get_ctrl(p, c);
 }
 
-/* op/oc/ov: a value we just sent that the firmware may not have applied yet (op < 0: none) */
-static void draw_panel(int op, int oc, int ov)
+static void draw_screen(int op, int oc, int ov)
 {
-	static const short rect[4] = { 0, PANEL_Y, 320, PANEL_H };
-	char buf[8], head[24];
-	int i, v;
+	static const short rect[4] = { 0, 0, W, H };
+	char buf[40], name[3][24], *e;
+	int i, j, x, y, sp = sel_part(), sc = sel_ctrl(), on[3];
 
-	fill(0, PANEL_Y, 320, PANEL_H, 0);
-	/* header strip: "R1  VOLUME" */
-	fill(0, PANEL_Y, 320, 11, 1);
+	for(i = 0; i < 3; i++) {
+		copy_name(name[i], voice_name(i), 20);
+		on[i] = part_on(i) & 1;
+	}
+	fill(0, 0, W - 1, H - 1, WT);
+
+	/* ---- status bar ---- */
+	copy_name(buf, STYLE_NAME, 24);
+	text(8, 9, buf, &f_smallb, K, 'l');
+	x = W - 8;
+	for(i = 0; i < 3; i++) {
+		int w;
+		if(i == 0) { e = cat(buf, "OCT "); num(e, get_octave() - 1, 1); }
+		else if(i == 1) { e = cat(buf, "TRP "); num(e, (signed char)get_transpose(), 1); }
+		else { e = num(buf, get_tempo(), 0); cat(e, " BPM"); }
+		w = text_width(&f_tiny, buf) + 10;
+		rrect(x - w, 3, x, 15, 6, 0, K);
+		text(x - half(w), 9, buf, &f_tiny, K, 'm');
+		x -= w + 4;
+	}
+	hspan(0, W - 1, 19, K);
+
+	/* ---- layer cards (display only; selected part marked with a side tab) ---- */
+	for(i = 0; i < 3; i++) {
+		int fg;
+		y = 25 + mul(i, 31);
+		if(on[i]) {
+			rrect(30, y, W - 31, y + 26, 7, 1, K);
+			fg = WT;
+			rrect(36, y + 6, 56, y + 19, 6, 1, WT);
+		} else {
+			dashed_box(30, y, W - 31, y + 26);
+			fg = K;
+			rrect(36, y + 6, 56, y + 19, 6, 0, K);
+		}
+		text(46, y + 13, part_label[i], &f_tiny, K, 'm');
+		text(64, y + 13, name[i], on[i] ? &f_name : &f_reg, fg, 'l');
+		if(on[i]) {
+			e = cat(buf, "VOL ");
+			e = num(e, val(i, 0, op, oc, ov), 0);
+			e = cat(e, "  BRT ");
+			num(e, val(i, 1, op, oc, ov), 0);
+		} else
+			cat(buf, "OFF");
+		text(W - 31 - 8, y + 13, buf, &f_tiny, fg, 'r');
+		if(i == sp) {               /* selection marker: arrow tab on the left */
+			int k;
+			static const u8 tip[7] = { 5, 4, 3, 3, 2, 1, 0 };   /* triangle (22,y+7) (27,y+13) (22,y+19) */
+			for(k = 0; k <= 6; k++) {
+				hspan(22, 22 + tip[k], y + 13 - k, K);
+				hspan(22, 22 + tip[k], y + 13 + k, K);
+			}
+		}
+	}
+	e = cat(buf, "LEFT   ");
+	copy_name(e, voice_name(3), 20);
+	text(W / 2, 124, buf, &f_small, K, 'm');
+
+	/* ---- bottom row ---- */
 	{
-		const char *p = part_name[sel_part()], *c = ctrl_name[sel_ctrl()];
-		int n = 0;
-		while(*p) head[n++] = *p++;
-		head[n++] = ' '; head[n++] = ' ';
-		while(*c) head[n++] = *c++;
-		head[n] = 0;
-		text_c(&font_small, 160, PANEL_Y + 2, head, 0);
-	}
-	/* parts: value of the selected control for each part */
-	for(i = 0; i < 3; i++) {
-		v = (i == op && sel_ctrl() == oc) ? ov : get_ctrl(i, sel_ctrl());
-		value_text(buf, sel_ctrl(), v);
-		draw_card(i, part_name[i], buf, v, i == sel_part(), 0);
-	}
-	/* controls: values for the selected part */
-	for(i = 0; i < 3; i++) {
-		v = (sel_part() == op && i == oc) ? ov : get_ctrl(sel_part(), i);
-		value_text(buf, i, v);
-		draw_card(3 + i, ctrl_name[i], buf, v, i == sel_ctrl(), 0);
-	}
-	draw_card(6, "", "", -1, 0, 1);
-	draw_card(7, "", "", -1, 0, 1);
-	/* divider between part and control groups */
-	fill(120, PANEL_Y + 16, 1, 66, 1);
+		const int top = 136;
+		hspan(0, W - 1, top, K);
+		text(60, top + 9, "PART", &f_tiny, K, 'm');
+		e = cat(buf, part_label[sp]);
+		e = cat(e, "  ");
+		cat(e, name[sp]);
+		upper(buf);
+		text(200, top + 9, buf, &f_tiny, K, 'm');
+		for(y = top + 18; y < H - 3; y += 2)
+			px(120, y, K);
 
-	lcd_refresh(FRAMEBUFFER, rect);
-	SAR3 = panel_sum() ^ values_sig();
-	clear_dirty();
+		/* part selectors (buttons 1-3) */
+		for(i = 0; i < 3; i++) {
+			int fg;
+			x = i * 40;
+			if(i == sp) { rrect(x + 5, top + 20, x + 35, top + 44, 8, 1, K); fg = WT; }
+			else { rrect(x + 5, top + 20, x + 35, top + 44, 8, 0, K); fg = K; }
+			text(x + 20, top + 32, part_label[i], &f_val, fg, 'm');
+			text(x + 20, top + 56, on[i] ? "ON" : "OFF", &f_tiny, K, 'm');
+			short_name(buf, name[i]);
+			text(x + 20, top + 70, buf, &f_tiny, K, 'm');
+		}
+
+		/* controls (buttons 4-8) for the selected part */
+		for(j = 0; j < 5; j++) {
+			int fg, v, y0 = top + 54, y1 = H - 22, fh;
+			x = (j + 3) * 40;
+			if(j >= 3) {                     /* free slot: faint dashed outline only */
+				dashed_box(x + 4, top + 18, x + 36, H - 4);
+				continue;
+			}
+			v = val(sp, j, op, oc, ov);
+			if(j == sc) { rrect(x + 3, top + 17, x + 37, H - 3, 7, 1, K); fg = WT; }
+			else fg = K;
+			text(x + 20, top + 26, ctrl_name[j], &f_tiny, fg, 'm');
+			num(buf, v, 0);
+			text(x + 20, top + 41, buf, &f_val, fg, 'm');
+			for(y = y0; y <= y1; y += 2)
+				px(x + 20, y, fg);
+			fh = 0;
+			{ int t = (y1 - y0) * v; while(t >= 127) { t -= 127; fh++; } }   /* (y1-y0)*v/127 */
+			if(fh)
+				rrect(x + 17, y1 - fh, x + 23, y1, 3, 1, fg);
+			if(j == 2) {                     /* REVERB on/off pill */
+				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, fg); text(x + 20, H - 11, "ON", &f_tiny, fg == K ? WT : K, 'm'); }
+				else { rrect(x + 9, H - 16, x + 31, H - 6, 5, 0, fg); text(x + 20, H - 11, "OFF", &f_tiny, fg, 'm'); }
+			}
+		}
+	}
+
+	SAR3 = screen_sum() ^ values_sig();
+	if((lcd_refresh(FRAMEBUFFER, rect) & 0xff) == 0)
+		clear_dirty();
+	else
+		set_dirty();     /* LCD queue full: send it again on the next UI flush */
 }
 
 static int visible(void)
@@ -354,7 +483,7 @@ static int visible(void)
 
 /* ---- hooks ---- */
 
-/* value-changed callbacks of the 8 faders (table 0x3B1488): just redraw */
+/* value-changed callbacks of the 8 stock faders (table 0x3B1488): redraw */
 void hp_changed(void)
 {
 	set_dirty();
@@ -388,13 +517,13 @@ void hp_step(int btn, int step)
 			set_ctrl(p, 2, nv);
 			set_sel(p, c);
 			if(visible())
-				draw_panel(p, 2, nv);
+				draw_screen(p, 2, nv);
 			return;
 		}
 		set_sel(p, c);
 	}
 	if(visible())
-		draw_panel(-1, 0, 0);
+		draw_screen(-1, 0, 0);
 }
 
 /* data dial: amount = clicks, dir 1 = up */
@@ -407,7 +536,7 @@ int hp_dial(int amount, int dir)
 	if(v < 0) v = 0;
 	if(v > 127) v = 127;
 	set_ctrl(sel_part(), sel_ctrl(), v);
-	draw_panel(sel_part(), sel_ctrl(), v);
+	draw_screen(sel_part(), sel_ctrl(), v);
 	return 0;
 }
 
@@ -418,6 +547,13 @@ void hp_tick(void)
 		FLUSH_FLAG = 0;
 		ui_flush_fn();
 	}
-	if(visible() && (dirty() || (panel_sum() ^ values_sig()) != SAR3))
-		draw_panel(-1, 0, 0);
+	if(visible()) {
+		set_shown(1);
+		if(dirty() || (screen_sum() ^ values_sig()) != SAR3)
+			draw_screen(-1, 0, 0);
+	} else if(shown()) {
+		/* another page or screen took over: let the stock screen repaint everything */
+		set_shown(0);
+		REPAINT_ALL = 1;
+	}
 }

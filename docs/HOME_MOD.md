@@ -1,22 +1,20 @@
-# New home panel (mod v1)
+# New home screen (mod v2: the agreed design, mockups/home_v3.py)
 
-Replaces the bottom half of the home screen (the stock MAIN VOLUME mixer page) with:
+Draws the whole home screen like the v3 mockup:
+- status line: style name, (BPM) (TRP) (OCT) pills;
+- R1/R2/R3 layer cards: voice name, VOL/BRT; filled card = part on, dashed = off; arrow at
+  the selected part; LEFT voice line below;
+- bottom row: PART pills R1/R2/R3 (LCD 1-3) with ON/OFF and short voice name; header
+  "R1  VOICE NAME"; controls VOLUME / BRIGHT / REVERB (LCD 4-6) with value, slider, reverb
+  ON/OFF pill; LCD 7-8 dashed (free).
+- DATA DIAL: changes the selected control (0-127) while this screen is showing; everywhere
+  else the dial works as before. LCD 6 DOWN: reverb off / back on at the previous level.
+- Other volumes (SONG, ACMP, M.PAD, LEFT, MIC): PART ON/OFF button shows the stock mixer
+  pages (the whole stock home screen comes back there); MAIN MIXER returns to the new screen.
 
-```
- [ R1 ][ R2 ][ R3 ] | [VOLUME][BRIGHT][REVERB][ ---- ][ ---- ]
-  LCD1  LCD2  LCD3     LCD4    LCD5    LCD6    LCD7    LCD8
-```
-- LCD 1-3 (UP or DOWN): select the part. The part cards show the selected control's
-  value for each part.
-- LCD 4-6: select the control. The control cards show the selected part's values.
-- DATA DIAL: changes the selected control of the selected part (0-127). Only while this
-  panel is showing; on every other screen the dial works exactly as before (tempo on the
-  other mixer pages, lists, menus...).
-- LCD 6 DOWN: reverb off for the selected part; again: back on at the previous level
-  (40 if it was never on).
-- Header strip shows the selection ("R2  REVERB"). LCD 7-8 are free for later.
-- Other volumes (SONG, ACMP, M.PAD, LEFT, MIC): Mixing Console VOL/EQ page (unchanged).
-- The top half (LEFT/SONG/STYLE/R1-R3 boxes, BPM/TRP/OCT bar) is still stock (phase 2).
+Data read from the firmware: voice_name(part) 0x3FFF4, part_on(part) 0x40048, tempo
+0x904CE(), transpose (signed) 0x51388(), octave 0x4005E()-1, style name pointer at RAM
+0x108F098 (kept by the stock home screen), volume/brightness/reverb getters.
 
 ## How it is built
 `mod/home/hp.c` (C, ~4 KB with fonts) compiled for SH-2 with the SH-4 cross compiler
@@ -30,7 +28,7 @@ Hooks (all listed with original bytes in `mod/home/build/patches.json`):
 | event table 0x3B14B0.. (8 pairs) | UP+DOWN together -> `hp_select` (does nothing) |
 | page-1 callbacks 0x3B1488.. (8) | "value changed" -> `hp_changed` (redraw) |
 | 0x6D45C (stock tempo/dial handler) | -> `hp_dial`; trampoline re-runs the original |
-| 0x24546 + literal 0x24574 (end of UI flush) | -> `hp_tick`: original tail, then redraw if the panel area was overdrawn or a value changed |
+| 0x24546 + literal 0x24574 (end of UI flush) | -> `hp_tick`: original tail, then redraw if the screen was overdrawn or anything shown changed; when another page takes over, sets 0x101DE56 so the stock screen repaints fully |
 
 Facts used: RAM 0x10BA718 = active button table (0x3B152C = MAIN VOLUME page has the
 buttons, i.e. home screen visible); framebuffer 0x10C8AEC (40 bytes/row, bit 7 = left,
@@ -49,6 +47,10 @@ is known, so the state lives in the unused DMA channel 3 registers (SAR3/DAR3/DM
   files alone. NOT tested on the keyboard; follow docs/RECOVERY.md first.
 
 ## Known limits / ideas
+- The stock home screen keeps running underneath and sometimes redraws a widget; the new
+  screen is redrawn over it at the next UI flush (brief flicker possible). If the LCD refresh
+  queue is full the update is retried at the next flush (seen in the emulator as a half-drawn
+  frame for a moment after several quick button presses). Watch for this on the keyboard.
 - Drawing is pixel-by-pixel for text; fast enough in the emulator, check feel on hardware.
 - Part on/off state is not shown yet (phase 2 with the top half).
 - The dial no longer changes tempo on the home screen (use TAP TEMPO, or slot 7 could become
