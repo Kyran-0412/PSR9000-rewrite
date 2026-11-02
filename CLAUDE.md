@@ -23,11 +23,12 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
 5. Boot splash: KyranOS, Kyran's own logo (mockups/splash_v2.py + splash_kyran_source.webp),
    DONE in the mod (v1 generated design kept in splash_v1.py).
 6. More later.
-Current layout: mockups/home_v6.py (= v5 + Yamaha-style blue status bar with yellow text and the
+Current layout: mockups/home_v7.py (= v6 + dotted texture behind the layers, solid panels behind
+off layers/LEFT, bottom section inverted to a blue panel; v6 = v5 + Yamaha-style blue status bar with yellow text and the
 stock transpose/octave icons, metronome icon under TEMPO; v5 = v4 + TEMPO box on LCD 1,
 everything else one button right;
 v4 = v3 + Bold text, 2 px borders, border around each control; v1-v4 are earlier drafts).
-IMPLEMENTED (full screen as mockup v6, mod v5): mod/home/ (C code + hooks), docs/HOME_MOD.md.
+IMPLEMENTED (full screen as mockup v7, mod v8): mod/home/ (C code + hooks), docs/HOME_MOD.md.
 Kyran wants the mockup design EXACTLY; do not invent a different layout.
 Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
 

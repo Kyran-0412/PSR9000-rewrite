@@ -429,6 +429,30 @@ static void wait_lcd_idle(void)
 		;
 }
 
+/* Yamaha-style dotted texture: every 4th pixel on every 2nd row, offset (12.5 % ink) */
+static void hatch(int y0, int y1)
+{
+	int y, b;
+	for(y = y0; y <= y1; y++) {
+		u8 *row = FRAMEBUFFER + y * 40;
+		u8 m = (y & 3) == 0 ? 0x88 : (y & 3) == 2 ? 0x22 : 0;   /* ink dots (ink = clear bits) */
+		for(b = 0; b < 40; b++)
+			row[b] = (u8)~m;
+	}
+}
+
+/* flip a band of rows (the bottom section is drawn normally, then inverted like Yamaha's
+ * blue panels) */
+static void invert_rows(int y0, int y1)
+{
+	int y, b;
+	for(y = y0; y <= y1; y++) {
+		u8 *row = FRAMEBUFFER + y * 40;
+		for(b = 0; b < 40; b++)
+			row[b] = ~row[b];
+	}
+}
+
 static void draw_screen(int op, int oc, int ov)
 {
 	static const short rect[4] = { 0, 0, W, H };
@@ -441,6 +465,7 @@ static void draw_screen(int op, int oc, int ov)
 	}
 	wait_lcd_idle();
 	fill(0, 0, W - 1, H - 1, WT);
+	hatch(19, 135);                              /* textured background behind the layers */
 
 	/* ---- status bar: Yamaha style, blue bar with yellow text and the stock icons ---- */
 	fill(0, 0, W - 1, 18, K);
@@ -466,6 +491,7 @@ static void draw_screen(int op, int oc, int ov)
 			fg = WT;
 			rrect(36, y + 6, 56, y + 19, 6, 1, WT);
 		} else {
+			rrect(30, y, W - 31, y + 26, 7, 1, WT);   /* solid panel so the text reads */
 			dashed_box(30, y, W - 31, y + 26);
 			fg = K;
 			rrect2(36, y + 6, 56, y + 19, 6, K);
@@ -491,6 +517,11 @@ static void draw_screen(int op, int oc, int ov)
 	}
 	e = cat(buf, "LEFT   ");
 	copy_name(e, voice_name(3), 20);
+	{
+		int lw = text_width(&f_small, buf);
+		rrect(W / 2 - half(lw) - 8, 117, W / 2 + half(lw) + 8, 131, 6, 1, WT);
+		rrect2(W / 2 - half(lw) - 8, 117, W / 2 + half(lw) + 8, 131, 6, K);
+	}
 	text(W / 2, 124, buf, &f_small, K, 'm');
 
 	/* ---- bottom row ---- */
@@ -562,6 +593,7 @@ static void draw_screen(int op, int oc, int ov)
 		}
 	}
 
+	invert_rows(136, H - 1);                    /* bottom section: blue panel, yellow text */
 	lcd_refresh(FRAMEBUFFER, rect);
 	SAR3 = screen_sum() ^ values_sig();
 	clear_dirty();

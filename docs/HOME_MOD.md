@@ -58,6 +58,11 @@ LCD 1 = TEMPO box (shows the BPM; selected: the dial changes tempo, header "TEMP
 LCD 2-4 = R1/R2/R3 (selecting one gives the dial back to the controls), LCD 5-7 = VOLUME /
 BRIGHT / REVERB (LCD 7 DOWN = reverb on/off), LCD 8 free.
 
+## Yamaha-style depth (mod v8, mockups/home_v7.py)
+Dotted texture (1 ink dot in 8 pixels, like the stock home background) behind the layer
+area, solid panels behind the off layers and the LEFT line, and the bottom section drawn as
+before then inverted (blue panel, yellow text, selected items yellow).
+
 ## KyranOS boot splash (mod v7)
 CURRENT: mockups/splash_v2.py = Kyran's own logo (mockups/splash_kyran_source.webp) scaled to
 320x240 and thresholded (yellow -> light pixels), ~2 KB compressed.
