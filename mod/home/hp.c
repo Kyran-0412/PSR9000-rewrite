@@ -592,8 +592,10 @@ static void draw_screen(int op, int oc, int ov)
 			upper(buf);
 		}
 		text(240, top + 9, buf, &f_tiny, K, 'm');
-		fill(40, top + 18, 40, H - 4, K);      /* solid dividers between the groups: */
-		fill(160, top + 18, 160, H - 4, K);    /* TEMPO | parts | controls */
+		for(y = top + 18; y < H - 3; y += 2) { /* dotted dividers: TEMPO | parts | controls */
+			px(40, y, K);
+			px(160, y, K);
+		}
 
 		/* tempo box (button 1) */
 		{
