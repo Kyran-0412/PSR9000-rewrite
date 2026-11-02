@@ -13,3 +13,8 @@ docs/private/
 
 # Python
 __pycache__/
+
+# mod build output (apply.lua is ours and small, keep it)
+mod/*/build/*
+!mod/*/build/apply.lua
+cfg/

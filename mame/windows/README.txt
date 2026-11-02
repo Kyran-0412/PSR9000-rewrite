@@ -34,3 +34,11 @@ Using it
   Screen Only.
 
 Resetting the emulated keyboard: quit, then delete the "nvram" folder.
+
+New home panel (test version)
+- START_PSR9000_NEW_HOME.bat starts the same emulator with the new home screen panel
+  (bottom half): LCD 1-3 = part R1/R2/R3, LCD 4-6 = VOLUME/BRIGHT/REVERB, the dial
+  changes the value, LCD 6 DOWN switches reverb off/on. Your ROM files are not changed;
+  the mod is applied in memory from mod\apply.lua.
+- BRIGHT always reads 0 in the emulator (the faked sound board cannot report it); on
+  the real keyboard it shows the actual value.

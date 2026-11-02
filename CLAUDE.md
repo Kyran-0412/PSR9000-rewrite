@@ -21,6 +21,8 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
    font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. More later.
 Current layout: mockups/home_v3.py (v1/v2 are earlier drafts).
+IMPLEMENTED (bottom half, v1): mod/home/ (C code + hooks), docs/HOME_MOD.md. Top half = phase 2.
+Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
 
 ## Leads for the goals (main_prog.bin offsets)
 - Parts are named RIGHT 1 / RIGHT 2 / RIGHT 3 / LEFT (0x3D0060, 0x3D0FF4).
