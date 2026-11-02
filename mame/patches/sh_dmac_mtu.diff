@@ -105,19 +105,20 @@ index 9fef06c6..975d517a 100644
  
  void sh7042_device::set_internal_interrupt(int level, u32 vector)
 diff --git a/src/devices/cpu/sh/sh7042.h b/src/devices/cpu/sh/sh7042.h
-index dbe2b32f..e2395195 100644
+index dbe2b32f..2a37963f 100644
 --- a/src/devices/cpu/sh/sh7042.h
 +++ b/src/devices/cpu/sh/sh7042.h
-@@ -46,6 +46,7 @@ public:
+@@ -46,6 +46,8 @@ public:
  	auto read_portf()  { return m_read_port16 [3].bind(); }
  
  	void internal_update();
 +	void mtu_input_capture(int channel, int tgr);
++	u32 pcf_e() const { return m_pcf_e; } // PECR1 (high word) / PECR2 (low word): pin functions
  	u16 do_read_adc(int port) { return m_read_adc[port](); }
  	u16 do_read_port16(int port) { return m_read_port16[port](); }
  	void do_write_port16(int port, u16 data, u16 ddr) { m_write_port16[port](0, data, ddr); }
 diff --git a/src/devices/cpu/sh/sh_dmac.cpp b/src/devices/cpu/sh/sh_dmac.cpp
-index 39775445..b77790d6 100644
+index 39775445..b5c1b9d3 100644
 --- a/src/devices/cpu/sh/sh_dmac.cpp
 +++ b/src/devices/cpu/sh/sh_dmac.cpp
 @@ -33,7 +33,6 @@ void sh_dmac_device::device_reset()
@@ -149,7 +150,7 @@ index 39775445..b77790d6 100644
  }
  
  void sh_dmac_channel_device::device_reset()
-@@ -64,52 +70,103 @@ void sh_dmac_channel_device::device_reset()
+@@ -64,52 +70,106 @@ void sh_dmac_channel_device::device_reset()
  	m_dar = 0;
  	m_dmatcr = 0;
  	m_chcr = 0;
@@ -216,8 +217,11 @@ index 39775445..b77790d6 100644
 +void sh_dmac_channel_device::check_start()
 +{
 +	auto *dmac = downcast<sh_dmac_device *>(owner());
-+	if(!BIT(m_chcr, 0) || BIT(m_chcr, 1) || (dmac->dmaor() & 7) != 1)
++	if(!BIT(m_chcr, 0) || BIT(m_chcr, 1) || (dmac->dmaor() & 7) != 1) {
++		if(BIT(m_chcr, 0))
++			logerror("not started: chcr %08x dmaor %04x\n", m_chcr, dmac->dmaor());
 +		return;
++	}
 +	int rs = (m_chcr >> 8) & 15;
 +	if(rs != 4) {
 +		logerror("unsupported request source %x\n", rs);
@@ -290,6 +294,54 @@ index 3c8436df..33e6ebdd 100644
  
  	virtual void device_start() override ATTR_COLD;
  	virtual void device_reset() override ATTR_COLD;
+diff --git a/src/devices/cpu/sh/sh_intc.cpp b/src/devices/cpu/sh/sh_intc.cpp
+index 989cc8d6..304b932e 100644
+--- a/src/devices/cpu/sh/sh_intc.cpp
++++ b/src/devices/cpu/sh/sh_intc.cpp
+@@ -62,7 +62,7 @@ void sh_intc_device::device_reset()
+ void sh_intc_device::interrupt_taken(int irqline, int vector)
+ {
+ 	// Don't clear an external interrupt which is level and still active
+-	if(vector < 64 || vector >= 72 || BIT(m_icr, 7-(vector & 7)) || !BIT(m_lines, vector & 7))
++	if(vector < 64 || vector >= 72 || !BIT(m_icr, 7-(vector & 7)) || !BIT(m_lines, vector & 7))
+ 		m_pending[vector >> 5] &= ~(1 << (vector & 31));
+ 
+ 	update_irq();
+@@ -102,6 +102,13 @@ void sh_intc_device::set_input(int inputnum, int state)
+ {
+ 	if(BIT(m_lines, inputnum) == state)
+ 		return;
++	if(state)
++		m_lines |= 1 << inputnum;
++	else
++		m_lines &= ~(1 << inputnum);
++	// ISR flag: edge mode latches on the active edge (cleared by writing 0)
++	if(state && !BIT(m_icr, 7-inputnum))
++		m_isr |= 0x80 >> inputnum;
+ 	if(BIT(m_icr, 7-inputnum)) {
+ 		// Level interrupt
+ 		if(state)
+@@ -129,12 +136,18 @@ void sh_intc_device::icr_w(offs_t, u16 data, u16 mem_mask)
+ 
+ u16 sh_intc_device::isr_r()
+ {
+-	return m_isr;
++	// IRQ0-7 flags in bits 7-0: level-sensed inputs show the pin state, edge inputs the latch
++	u16 level = 0;
++	for(int i = 0; i != 8; i++)
++		if(BIT(m_icr, 7-i) && BIT(m_lines, i))
++			level |= 0x80 >> i;
++	return (m_isr & ~(m_icr & 0xff)) | level;
+ }
+ 
+ void sh_intc_device::isr_w(offs_t, u16 data, u16 mem_mask)
+ {
+-	COMBINE_DATA(&m_isr);
++	// flags can only be cleared by software
++	m_isr &= data | ~mem_mask;
+ 	logerror("isr_w %04x @ %04x\n", data, mem_mask);
+ }
+ 
 diff --git a/src/devices/cpu/sh/sh_mtu.cpp b/src/devices/cpu/sh/sh_mtu.cpp
 index 532a47da..997fba93 100644
 --- a/src/devices/cpu/sh/sh_mtu.cpp
