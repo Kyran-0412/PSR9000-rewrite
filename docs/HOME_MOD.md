@@ -103,7 +103,7 @@ our screen is up). Verified in the emulator: no framebuffer writes at all over 1
 LCD 8 = PAN of the selected part (category 2 id 6, getter 0x50C34; 64 = C, shown L1-L63 /
 R1-R63) drawn as a knob (-135..+135 degrees, pointer table in hp.c). The controls have no
 borders: the selected one has a filled dot above its name and the name inverted on a pill;
-dotted lines separate the controls; solid lines divide TEMPO | parts | controls.
+dotted lines separate the controls; solid 2 px lines divide TEMPO | parts | controls (1 px vanished in a scaled-down emulator window).
 
 ## Master EQ page (mod v9, mockups/eq_v2.py, home tab: mockups/home_v8.py)
 Own page on top of the home screen; the stock Mixing Console M.EQ page is unchanged and edits

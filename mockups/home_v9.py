@@ -123,7 +123,7 @@ d.line((0, top, W, top), fill=K)
 t((100, top + 9), 'PART', f_tiny, anchor='mm')
 P = parts[sel_part]
 t((240, top + 9), '' if tempo_sel else '%s  %s' % (P['p'], P['name'].upper()), f_tiny, anchor='mm')
-d.line((40, top + 18, 40, H - 4), fill=K); d.line((160, top + 18, 160, H - 4), fill=K)   # solid group dividers
+d.rectangle((39, top + 18, 40, H - 4), fill=K); d.rectangle((159, top + 18, 160, H - 4), fill=K)   # solid 2 px group dividers
 
 # tempo box (button 1)
 b = (5, top + 20, 35, top + 44)
