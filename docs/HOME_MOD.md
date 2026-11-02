@@ -137,7 +137,10 @@ the same settings.
   100 Hz-10 kHz, EQ5 500 Hz-16 kHz. CHECK ON THE KEYBOARD against the stock page.
 - Band shape: no shape setting is sent by the stock page (XG has shelf/peak for EQ1/EQ5);
   the graph draws every band as a bell.
-- Hooks: home LCD F handler entry 0x332C24 (was 0x6A124: select RIGHT 1) -> hp_side_f;
+- Hooks: home side-button entries (pointer list 0x332C60, A..J; only A, F, G, H have actions):
+  0x332C14 A (0x6A0B8, restore function), 0x332C24 F (0x6A124, R1 solo), 0x332C34 G (0x6A142,
+  R2 solo), 0x332C44 H (0x6A160, R3 solo) -> hp_side: on our screen F = EQ page, the others
+  do nothing; elsewhere the stock action runs;
   home panel default handler 0x3B152C (was 0x260670, gets EXIT) -> hp_default.
   Per-button handlers live in RAM 0x103EF40 + 4*button (entry+0 = press handler), filled from
   ROM tables like 0x332C14 (home LCD E-H).

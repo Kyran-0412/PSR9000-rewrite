@@ -1080,11 +1080,22 @@ void hp_tick(void)
 	}
 }
 
-/* home side button F (table 0x332C24): open / close the Master EQ page */
-int hp_side_f(int btn, int arg)
+/* Home side buttons with a stock action (table 0x332C60 -> entries 0x332C14/24/34/44):
+ * A = 0x6A0B8 (opens the restore function), F = 0x6A124 / G = 0x6A142 / H = 0x6A160 (R1 / R2 /
+ * R3 solo). While our screen is up: F opens / closes the Master EQ page, the others do nothing
+ * (parts are chosen with the panel buttons). Anywhere else the stock action runs. */
+int hp_side(int btn, int arg)
 {
-	if(!visible())
-		return orig_side_f(btn, arg);
+	int b = btn & 0xffff;
+	if(!visible()) {
+		if(b == 0x88) return FW(0x6a0b8, int (*)(int, int))(btn, arg);
+		if(b == 0x8d) return orig_side_f(btn, arg);
+		if(b == 0x8e) return FW(0x6a142, int (*)(int, int))(btn, arg);
+		if(b == 0x8f) return FW(0x6a160, int (*)(int, int))(btn, arg);
+		return 0;
+	}
+	if(b != 0x8d)
+		return 0;
 	set_eq(!eq_on(), eq_band(), eq_mode());
 	if(eq_on())
 		draw_eq(-1, 0, 0);

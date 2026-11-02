@@ -104,8 +104,11 @@ def main():
         assert struct.unpack('>I', open(os.path.join(ROOT, 'firmware', 'main_prog.bin'), 'rb').read()[a:a + 4])[0] == 0x10BF60
         patches.append((a, be32(syms['hp_refresh']), 'graphics library LCD refresh -> filter'))
     rom0 = open(os.path.join(ROOT, 'firmware', 'main_prog.bin'), 'rb').read()
-    assert rom0[0x332C24:0x332C28] == be32(0x6A124) and rom0[0x3B152C:0x3B1530] == be32(0x260670)
-    patches.append((0x332C24, be32(syms['hp_side_f']), 'home LCD F -> Master EQ page'))
+    assert rom0[0x3B152C:0x3B1530] == be32(0x260670)
+    for a, orig, what in ((0x332C14, 0x6A0B8, 'A (restore)'), (0x332C24, 0x6A124, 'F -> Master EQ page'),
+                          (0x332C34, 0x6A142, 'G (R2 solo)'), (0x332C44, 0x6A160, 'H (R3 solo)')):
+        assert rom0[a:a + 4] == be32(orig)
+        patches.append((a, be32(syms['hp_side']), 'home side button ' + what))
     patches.append((0x3B152C, be32(syms['hp_default']), 'home panel default handler (EXIT closes EQ)'))
     for i in range(8):     # fader value-changed callbacks -> redraw
         patches.append((0x3B1488 + 4 * i, be32(syms['hp_changed']), 'value changed callback'))
