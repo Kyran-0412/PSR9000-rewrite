@@ -647,8 +647,10 @@ static void draw_screen(int op, int oc, int ov)
 			sel = j == sc && !ts;
 			v = val(sp, j, op, oc, ov);
 			rrect(cx - 3, top + 18, cx + 3, top + 24, 3, sel, K);
-			if(sel)
-				rrect(x + 1, top + 26, x + 39, top + 36, 5, 1, K);
+			if(sel) {                        /* pill sized to the name, clear of the dividers */
+				int w = text_width(FT_LABEL, ctrl_name[j]) + 8;
+				rrect(cx - half(w), top + 26, cx - half(w) + w - 1, top + 36, 5, 1, K);
+			}
 			text(cx, top + 31, ctrl_name[j], FT_LABEL, sel ? WT : K, 'm');
 			if(j == 3)
 				pan_text(buf, v);
@@ -659,12 +661,14 @@ static void draw_screen(int op, int oc, int ov)
 				pan_knob(cx, 205, v);
 				continue;
 			}
+			/* fader: dotted track with a cap that slides up (mockup v11) */
 			for(y = y0; y <= y1; y += 2)
 				px(cx, y, K);
 			fh = 0;
-			{ int t = (y1 - y0) * v; while(t >= 127) { t -= 127; fh++; } }   /* (y1-y0)*v/127 */
-			if(fh)
-				rrect(cx - 3, y1 - fh, cx + 3, y1, 3, 1, K);
+			{ int t = (y1 - y0 - 4) * v; while(t >= 127) { t -= 127; fh++; } }   /* (range)*v/127 */
+			y = y1 - 2 - fh;                 /* cap centre */
+			rrect(cx - 6, y - 2, cx + 6, y + 2, 2, 1, K);
+			hspan(cx - 4, cx + 4, y, WT);    /* grip line across the cap */
 			if(j == 2) {                     /* REVERB on/off pill */
 				rrect(x + 6, H - 16, x + 34, H - 6, 5, 1, K);   /* filled either way */
 				text(cx, H - 11, v ? "ON" : "OFF", FT_LABEL, WT, 'm');

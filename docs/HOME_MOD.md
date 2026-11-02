@@ -102,6 +102,11 @@ Two causes, both about redrawing once a second although nothing changed: the sto
 stock UI flush (0x10BB0C) copies the stock screen over ours about once a second (skipped while
 our screen is up). Verified in the emulator: no framebuffer writes at all over 14 s idle.
 
+## Fader caps (mockups/home_v11.py)
+VOL / BRT / REV are drawn as a fader: dotted track with a 13x5 cap (grip line across) at the
+value, instead of a bar filling up. The selected control's name pill is the name's width + 8 px,
+so it no longer touches the dividers.
+
 ## Yamaha fonts (mod v12, mockups/home_v10.py, eq_v3.py)
 All text uses the firmware's own bitmap fonts, read from the ROM at run time (table 0x357B08,
 see CLAUDE.md): font 1 (7 px bold) for labels, font 3 (10 px) for values and titles, font 4

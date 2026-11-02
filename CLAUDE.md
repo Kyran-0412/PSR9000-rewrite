@@ -23,7 +23,8 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
 5. Boot splash: KyranOS, Kyran's own logo (mockups/splash_v2.py + splash_kyran_source.webp),
    DONE in the mod (v1 generated design kept in splash_v1.py).
 6. More later.
-Current layout: mockups/home_v10.py (= v9 with YAMAHA'S OWN BITMAP FONTS, read from the firmware at
+Current layout: mockups/home_v11.py (= v10 with fader caps on a dotted track instead of filling
+bars, selected-name pill sized to the name). v10 = v9 with YAMAHA'S OWN BITMAP FONTS, read from the firmware at
 run time, labels in capitals, control names VOL/BRT/REV/PAN; Kyran: "so much better"; EQ page = eq_v3.py).
 v9 = v8 + PAN knob on LCD 8, no borders around the controls:
 selected = filled dot + inverted name, dotted lines between controls; v8 = v7 + EQ tab; v7 = v6 + dotted texture behind the layers, solid panels behind
