@@ -94,7 +94,8 @@ static int half(int v) { return v < 0 ? -(int)shr(-v, 1) : (int)shr(v, 1); }
  *   SAR3    = checksum of the screen (and values) right after we drew it
  *   DAR3    = [31..24] magic 0x5A, [23] dirty, [22..21] part, [20..19] control, [18] shown,
  *             [17] TEMPO selected (the dial changes tempo), [16] Master EQ page open,
- *             [15..13] EQ band 0-4, [12..11] what the dial changes on it (0 GAIN, 1 Q, 2 FREQ)
+ *             [15..13] EQ band 0-4, [12..11] what the dial changes on it (0 GAIN, 1 Q, 2 FREQ),
+ *             [3..0] settle counter after switching to the home screen (0 = settled)
  *   DMATCR3 = reverb level to restore, 8 bits per part (24-bit register)
  * On power-up the registers hold garbage, so the magic byte tells us to start fresh.
  */
@@ -122,6 +123,8 @@ static int dirty(void) { return shr(st(), 23) & 1; }
 static void clear_dirty(void) { DAR3 = st() & ~0x800000u; }
 static int shown(void) { return shr(st(), 18) & 1; }
 static void set_shown(int on) { DAR3 = on ? (st() | 0x40000u) : (st() & ~0x40000u); }
+static int settle(void) { return st() & 15; }
+static void set_settle(int n) { DAR3 = (st() & ~15u) | (u32)(n & 15); }
 static int eq_on(void) { return shr(st(), 16) & 1; }
 static int eq_band(void) { return shr(st(), 13) & 7; }
 static int eq_mode(void) { return shr(st(), 11) & 3; }
@@ -1023,7 +1026,28 @@ void hp_tick(void)
 			ui_flush_fn();
 	}
 	if(visible()) {
-		set_shown(1);
+		if(!shown()) {
+			/* Just switched to the home screen (e.g. after the boot splash): the stock home
+			 * panel is still building itself in the framebuffer, and a frame drawn now would
+			 * be sent to the LCD with some of its widgets in it (the old screen flashed up).
+			 * Wait until the framebuffer stops changing; the LCD keeps the previous picture
+			 * meanwhile because the stock refreshes are held back while we are visible. */
+			set_shown(1);
+			set_settle(1);
+			SAR3 = screen_sum();
+			return;
+		}
+		if(settle()) {
+			u32 sum = screen_sum();
+			int n = settle();
+			if((sum != SAR3 || n < 2) && n < 12) {
+				SAR3 = sum;
+				set_settle(n + 1);
+				return;
+			}
+			set_settle(0);
+			set_dirty();
+		}
 		if(eq_on()) {
 			if(dirty() || (screen_sum() ^ eq_sig()) != SAR3)
 				draw_eq(-1, 0, 0);

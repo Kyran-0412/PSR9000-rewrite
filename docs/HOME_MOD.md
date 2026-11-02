@@ -72,6 +72,14 @@ checked). The boot code draws the stock splash with 0x10ABCA(fb, pixels, rect 0x
 0x25FAE; the pixel pointer literal at 0x26010 now points to our data right after the mod code.
 Pixel 1 = light LCD colour, same polarity as Yamaha's splash.
 
+## Old home screen flashing after the boot splash (fixed in mod v11)
+Right after switching to the home screen, the stock home panel is still building its widgets in
+the framebuffer (no LCD refresh of its own). Our first frame was drawn in the middle of that and
+sent to the LCD with stock faders in it (seen as the old screen for a fraction of a second).
+Now hp_tick waits after the switch until the framebuffer is the same on two ticks in a row
+(at most 12 ticks, counter in DAR3 bits 3-0) before drawing; the LCD keeps the previous picture
+meanwhile because stock refreshes are held back while the home screen is active.
+
 ## Flicker while turning the dial (fixed in mod v6)
 Drawing started while the previous frame was still being copied to the LCD (DMA, 20 bytes per
 step, ~30 ms per screen), so the LCD picked up a half-cleared screen about once a second.
