@@ -91,6 +91,35 @@ Two causes, both about redrawing once a second although nothing changed: the sto
 stock UI flush (0x10BB0C) copies the stock screen over ours about once a second (skipped while
 our screen is up). Verified in the emulator: no framebuffer writes at all over 14 s idle.
 
+## Master EQ page (mod v9, mockups/eq_v2.py, home tab: mockups/home_v8.py)
+Own page on top of the home screen; the stock Mixing Console M.EQ page is unchanged and edits
+the same settings.
+- Open: side button F (top right; "EQ" tab on the home screen). Close: EXIT or F again. Going
+  to any other screen also closes it.
+- LCD 1-5: select band EQ1-EQ5. LCD 6/7/8: the dial changes Q / GAIN / FREQ of that band.
+  UP+DOWN together: reset (LCD 1-5: that band's gain; LCD 6-8: that knob), like the stock page.
+- Graph: 20 Hz-20 kHz (4.5 px per XG frequency step), +-12 dB, curve = sum of one bell per band
+  (gain / (1 + (1.39 Q d)^2), d in octaves): a picture of the curve, not an exact response.
+- Firmware interface (found in the stock page code 0x275E00-0x276F00, src pnm_*):
+  read gain 0x4D27A(band) (64 = 0 dB), freq 0x4D240(band) (index into the XG table at
+  0x3E957C: 0 = Thru, 1 = 22 Hz .. 59 = 18 kHz, 60 = Thru), Q 0x4D1DA(band) (Q x 10),
+  preset 0x4D1CA() (system params 0xCD+b, 0xD2+b, 0xD7+b, 0xCC);
+  write 0x25CE4(12, id, 2, [band, value]): id 21 Q, 22 FREQ, 23 GAIN; id 19 [band, k] = reset
+  knob k (0 Q, 1 FREQ, 2 GAIN) to default; id 20 [n] = preset (0-1 PRESET1-2, 2-3 USER1-2);
+  id 24 [v] = total gain adjust.
+- Limits: the stock page asks the tone generator (0x4D2B4/0x4D2C8 Q, 0x4D2DC/0x4D37A freq per
+  band, 0x4D3F0/0x4D404 gain); in the emulator that query is faked, so the mod uses the
+  standard XG Multi EQ ranges: gain -12..+12 dB, Q 0.1-12.0, freq EQ1 32 Hz-2.0 kHz, EQ2-4
+  100 Hz-10 kHz, EQ5 500 Hz-16 kHz. CHECK ON THE KEYBOARD against the stock page.
+- Band shape: no shape setting is sent by the stock page (XG has shelf/peak for EQ1/EQ5);
+  the graph draws every band as a bell.
+- Hooks: home LCD F handler entry 0x332C24 (was 0x6A124: select RIGHT 1) -> hp_side_f;
+  home panel default handler 0x3B152C (was 0x260670, gets EXIT) -> hp_default.
+  Per-button handlers live in RAM 0x103EF40 + 4*button (entry+0 = press handler), filled from
+  ROM tables like 0x332C14 (home LCD E-H).
+- Emulator: the preset name is not shown (the faked tone generator leaves the preset value
+  outside 0-3).
+
 ## Known limits / ideas
 - The stock home screen keeps running underneath and sometimes redraws a widget; the new
   screen is redrawn over it at the next UI flush (brief flicker possible). If the LCD refresh

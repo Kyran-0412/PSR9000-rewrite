@@ -46,6 +46,18 @@ typedef unsigned int u32;
 #define FLUSH_FLAG   (*(volatile u8 *)0x101de57)
 #define REPAINT_ALL  (*(volatile u8 *)0x101de56)   /* UI flush: 1 = redraw the whole stock screen */
 
+/* Master EQ (5 bands, values as the stock Mixing Console M.EQ page uses them, category 12):
+ * gain 64 = 0 dB (1 step = 1 dB), freq = index into the XG frequency table (Thru, 22Hz ..
+ * 18kHz, Thru), Q = Q x 10. */
+#define eq_gain      FW(0x4d27a, int (*)(int band))
+#define eq_freq      FW(0x4d240, int (*)(int band))
+#define eq_q         FW(0x4d1da, int (*)(int band))
+#define eq_preset    FW(0x4d1ca, int (*)(void))               /* 0-1 PRESET1-2, 2-3 USER1-2 */
+#define FREQ_NAMES   ((const char *const *)0x3e957c)
+#define orig_side_f  FW(0x6a124, int (*)(int btn, int arg))   /* home LCD F: select RIGHT 1 */
+#define orig_default FW(0x260670, int (*)(int btn, int arg))  /* home panel: other buttons */
+#define BTN_EXIT     0x87
+
 extern int orig_tempo_dial(int amount, int dir);   /* tramp.S: the old dial handler */
 
 /* Shifts: the compiler would use SH-4 dynamic shift instructions even for constant shifts,
@@ -80,7 +92,8 @@ static int half(int v) { return v < 0 ? -(int)shr(-v, 1) : (int)shr(v, 1); }
  * which the firmware never uses (no reference to 0xFFFF86F0-0xFFFF86FF):
  *   SAR3    = checksum of the screen (and values) right after we drew it
  *   DAR3    = [31..24] magic 0x5A, [23] dirty, [22..21] part, [20..19] control, [18] shown,
- *             [17] TEMPO selected (the dial changes tempo)
+ *             [17] TEMPO selected (the dial changes tempo), [16] Master EQ page open,
+ *             [15..13] EQ band 0-4, [12..11] what the dial changes on it (0 GAIN, 1 Q, 2 FREQ)
  *   DMATCR3 = reverb level to restore, 8 bits per part (24-bit register)
  * On power-up the registers hold garbage, so the magic byte tells us to start fresh.
  */
@@ -108,6 +121,13 @@ static int dirty(void) { return shr(st(), 23) & 1; }
 static void clear_dirty(void) { DAR3 = st() & ~0x800000u; }
 static int shown(void) { return shr(st(), 18) & 1; }
 static void set_shown(int on) { DAR3 = on ? (st() | 0x40000u) : (st() & ~0x40000u); }
+static int eq_on(void) { return shr(st(), 16) & 1; }
+static int eq_band(void) { return shr(st(), 13) & 7; }
+static int eq_mode(void) { return shr(st(), 11) & 3; }
+static void set_eq(int on, int band, int mode)
+{
+	DAR3 = (st() & ~0x1f800u) | (on ? 0x10000u : 0) | shl(band, 13) | shl(mode, 11) | 0x800000u;
+}
 static u32 part_shift(u32 v, int part)
 {
 	if(part == 1) return shl(v, 8);
@@ -515,6 +535,18 @@ static void draw_screen(int op, int oc, int ov)
 			}
 		}
 	}
+	/* v8: side button F (top right) opens the Master EQ page */
+	rrect(W - 28, 20, W - 2, 36, 6, 1, K);
+	text(W - 18, 28, "EQ", &f_tiny, WT, 'm');
+	{
+		int k;
+		for(k = 0; k <= 4; k++)                  /* triangle (W-9,24) (W-5,28) (W-9,32) */
+		{
+			hspan(W - 9, W - 9 + 4 - k, 28 - k, WT);
+			hspan(W - 9, W - 9 + 4 - k, 28 + k, WT);
+		}
+	}
+
 	e = cat(buf, "LEFT   ");
 	copy_name(e, voice_name(3), 20);
 	{
@@ -599,6 +631,248 @@ static void draw_screen(int op, int oc, int ov)
 	clear_dirty();
 }
 
+
+/* ================= Master EQ page (mockups/eq_v2.py) ================= */
+
+/* XG Multi EQ ranges (the stock page asks the tone generator for its limits; these are the
+ * standard XG ones, and the tone generator clamps anyway) */
+static void eq_range(int band, int mode, int *lo, int *hi)
+{
+	if(mode == 0) { *lo = 52; *hi = 76; }             /* -12 .. +12 dB */
+	else if(mode == 1) { *lo = 1; *hi = 120; }        /* Q 0.1 .. 12.0 */
+	else if(band == 0) { *lo = 4; *hi = 40; }         /* 32 Hz .. 2.0 kHz */
+	else if(band == 4) { *lo = 28; *hi = 58; }        /* 500 Hz .. 16 kHz */
+	else { *lo = 14; *hi = 54; }                      /* 100 Hz .. 10 kHz */
+}
+
+static int eq_get(int band, int mode)
+{
+	if(mode == 0) return eq_gain(band) & 0x7f;
+	if(mode == 1) return eq_q(band) & 0x7f;
+	return eq_freq(band) & 0x7f;
+}
+
+/* stock M.EQ messages: 21 Q, 22 FREQ, 23 GAIN = [band, value]; 19 = [band, knob]: reset that
+ * knob to its default (0 Q, 1 FREQ, 2 GAIN; the stock page sends it for UP+DOWN together) */
+static void eq_set(int band, int mode, int value)
+{
+	static const u8 id[3] = { 23, 21, 22 };
+	u8 data[2];
+	data[0] = band;
+	data[1] = value;
+	post_param(12, id[mode], 2, data);
+}
+static void eq_reset(int band, int mode)
+{
+	static const u8 knob[3] = { 2, 0, 1 };
+	u8 data[2];
+	data[0] = band;
+	data[1] = knob[mode];
+	post_param(12, 19, 2, data);
+}
+
+static u32 udiv(u32 n, u32 d)          /* no hardware divide on the SH-2 path we use */
+{
+	u32 q = 0, r = 0;
+	int i;
+	for(i = 31; i >= 0; i--) {
+		r = shl(r, 1) | (shr(n, i) & 1);
+		if(r >= d) { r -= d; q |= shl(1, i); }
+	}
+	return q;
+}
+
+/* "70Hz" -> "70", "1.0kHz" -> "1.0k" */
+static void freq_text(char *d, int f, int keep_hz)
+{
+	const char *s = (f >= 0 && f <= 60) ? FREQ_NAMES[f] : "";
+	while(*s && (keep_hz || *s != 'H')) *d++ = *s++;
+	*d = 0;
+}
+static char *q_text(char *d, int q)    /* 25 -> "2.5" */
+{
+	int w = 0;
+	while(q >= 10) { q -= 10; w++; }
+	d = num(d, w, 0);
+	*d++ = '.';
+	*d++ = '0' + q;
+	*d = 0;
+	return d;
+}
+static char *gain_text(char *d, int g, int db)   /* 66 -> "+2dB" */
+{
+	d = num(d, g - 64, 1);
+	if(db) d = cat(d, "dB");
+	return d;
+}
+
+/* graph: x = 34 + 4.5 px per XG frequency step (index 0 = 20 Hz .. 60 = 20 kHz),
+ * y: 0 dB at row 73, 3.5 px per dB */
+#define GX0 34
+#define GX1 304
+#define GY0 30
+#define GY1 116
+#define GMID 73
+static int eq_x(int f) { return GX0 + (int)shr(mul(f, 9), 1); }
+static int eq_y2(int g) { return mul(GMID, 2) - mul(g - 64, 7); }   /* in half pixels */
+
+/* Bell of one peaking band at column x, in half pixels: gain / (1 + (1.39 Q d)^2), d in
+ * octaves (one XG step = 1/6 octave). a = Q x distance in 1/9 steps; 391 a-units = 1. */
+static int bell2(int x, int f, int q, int g)
+{
+	int a = mul(q, mul(x - GX0, 2) - mul(f, 9)), num7 = mul(g - 64, 7);
+	u32 a2;
+	if(a < 0) a = -a;
+	if(a > 20000 || !num7) return 0;
+	a2 = (u32)mul(a, a);
+	if(num7 < 0)
+		return -(int)udiv((u32)mul(-num7, 152881), 152881u + a2);
+	return (int)udiv((u32)mul(num7, 152881), 152881u + a2);
+}
+
+static u32 eq_sig(void)
+{
+	u32 s = (u32)eq_preset();
+	int b;
+	for(b = 0; b < 5; b++)
+		s = rotl1(rotl1(rotl1(s))) ^ (u32)eq_gain(b) ^ shl(eq_freq(b) & 0xff, 8) ^ shl(eq_q(b) & 0xff, 16);
+	return s;
+}
+
+static void draw_eq(int ob, int om, int ov)
+{
+	static const short rect[4] = { 0, 0, W, H };
+	static const char *const preset_name[4] = { "PRESET 1", "PRESET 2", "USER 1", "USER 2" };
+	static const char *const mode_name[3] = { "Q", "GAIN", "FREQ" };   /* LCD 6, 7, 8 */
+	static const u8 mode_of_slot[3] = { 1, 0, 2 };
+	char buf[40], *e;
+	int g[5], f[5], q[5], b, x, y, sb = eq_band(), sm = eq_mode(), pr;
+
+	for(b = 0; b < 5; b++) {
+		g[b] = eq_gain(b) & 0x7f;
+		f[b] = eq_freq(b) & 0x7f;
+		q[b] = eq_q(b) & 0x7f;
+	}
+	if(ob >= 0) {                       /* value just sent, maybe not applied yet */
+		if(om == 0) g[ob] = ov; else if(om == 1) q[ob] = ov; else f[ob] = ov;
+	}
+	pr = eq_preset();
+
+	wait_lcd_idle();
+	fill(0, 0, W - 1, H - 1, WT);
+	hatch(19, 135);
+
+	/* status bar */
+	fill(0, 0, W - 1, 18, K);
+	text(8, 9, "MASTER EQ", &f_smallb, WT, 'l');
+	if(pr >= 0 && pr < 4)
+		text(160, 9, preset_name[pr], &f_smallb, WT, 'm');
+	text(W - 8, 9, "EXIT TO HOME", &f_tiny, WT, 'r');
+
+	/* graph card */
+	rrect(6, 23, W - 7, 131, 7, 1, WT);
+	rrect2(6, 23, W - 7, 131, 7, K);
+	{
+		static const signed char dbs[4] = { -12, -6, 6, 12 };
+		static const u8 fl[3] = { 14, 34, 54 };            /* 100 Hz, 1 kHz, 10 kHz */
+		static const char *const fls[3] = { "100", "1k", "10k" };
+		int i;
+		for(i = 0; i < 4; i++) {
+			y = GMID - (int)shr(mul(dbs[i], 7), 1);
+			if(dbs[i] < 0) y = GMID + (int)shr(mul(-dbs[i], 7), 1);
+			for(x = GX0; x < GX1; x += 3) px(x, y, K);
+			num(buf, dbs[i], 1);
+			text(GX0 - 4, y, buf, &f_tiny, K, 'r');
+		}
+		hspan(GX0, GX1, GMID, K);
+		text(GX0 - 4, GMID, "0", &f_tiny, K, 'r');
+		for(i = 0; i < 3; i++) {
+			x = eq_x(fl[i]);
+			for(y = GY0; y < GY1; y += 3) px(x, y, K);
+			text(x, 124, fls[i], &f_tiny, K, 'm');
+		}
+	}
+	/* curve: light dots between the curve and 0 dB, then a 2 px line */
+	{
+		int prev = -1;
+		for(x = GX0; x <= GX1; x++) {
+			int h2 = 0, yy, y0, y1;
+			for(b = 0; b < 5; b++)
+				h2 += bell2(x, f[b], q[b], g[b]);
+			if(h2 > 84) h2 = 84;
+			if(h2 < -84) h2 = -84;
+			y = GMID - half(h2);
+			y0 = y < GMID ? y : GMID;
+			y1 = y < GMID ? GMID : y;
+			for(yy = y0; yy <= y1; yy++)
+				if(!(yy & 1) && !((x + yy) & 1)) px(x, yy, K);
+			if(prev < 0) prev = y;
+			y0 = prev < y ? prev : y;
+			y1 = prev < y ? y : prev;
+			fill(x, y0, x, y1 + 1, K);
+			prev = y;
+		}
+	}
+	/* band points: selected = filled and bigger */
+	for(b = 0; b < 5; b++) {
+		char n[2];
+		int cy;
+		n[0] = '1' + b; n[1] = 0;
+		x = eq_x(f[b]);
+		cy = half(eq_y2(g[b]));
+		if(b == sb) { rrect(x - 7, cy - 7, x + 7, cy + 7, 7, 1, K); text(x, cy, n, &f_tiny, WT, 'm'); }
+		else {
+			rrect(x - 6, cy - 6, x + 6, cy + 6, 6, 1, WT);
+			rrect2(x - 6, cy - 6, x + 6, cy + 6, 6, K);
+			text(x, cy, n, &f_tiny, K, 'm');
+		}
+	}
+
+	/* bottom panel (drawn ink-on-paper, then inverted) */
+	{
+		const int top = 136;
+		text(100, top + 9, "BAND", &f_tiny, K, 'm');
+		e = cat(buf, "EQ");
+		*e++ = '1' + sb; *e = 0;
+		e = cat(e, "  ");
+		freq_text(e, f[sb], 1);
+		while(*e) e++;
+		e = cat(e, "  Q ");
+		q_text(e, q[sb]);
+		text(260, top + 9, buf, &f_tiny, K, 'm');
+		for(y = top + 18; y < H - 3; y += 2) px(200, y, K);
+		for(b = 0; b < 5; b++) {                  /* LCD 1-5: band select */
+			int fg;
+			x = mul(b, 40);
+			if(b == sb) { rrect(x + 5, top + 20, x + 35, top + 44, 8, 1, K); fg = WT; }
+			else { rrect2(x + 5, top + 20, x + 35, top + 44, 8, K); fg = K; }
+			e = cat(buf, "EQ");
+			*e++ = '1' + b; *e = 0;
+			text(x + 20, top + 32, buf, &f_small, fg, 'm');
+			gain_text(buf, g[b], 1);
+			text(x + 20, top + 56, buf, &f_tiny, K, 'm');
+			freq_text(buf, f[b], 0);
+			text(x + 20, top + 70, buf, &f_tiny, K, 'm');
+		}
+		for(b = 0; b < 3; b++) {                  /* LCD 6-8: what the dial changes */
+			int m = mode_of_slot[b], fg;
+			x = mul(b + 5, 40);
+			if(m == sm) { rrect(x + 1, top + 17, x + 38, H - 3, 7, 1, K); fg = WT; }
+			else { rrect(x + 1, top + 17, x + 38, H - 3, 7, 0, K); fg = K; }
+			text(x + 20, top + 29, mode_name[b], &f_tiny, fg, 'm');
+			if(m == 0) gain_text(buf, g[sb], 0);
+			else if(m == 1) q_text(buf, q[sb]);
+			else freq_text(buf, f[sb], 0);
+			text(x + 20, top + 47, buf, &f_val, fg, 'm');
+			text(x + 20, H - 16, m == 0 ? "dB" : m == 2 ? "Hz" : "", &f_tiny, fg, 'm');
+		}
+	}
+	invert_rows(136, H - 1);
+	lcd_refresh(FRAMEBUFFER, rect);
+	SAR3 = screen_sum() ^ eq_sig();
+	clear_dirty();
+}
+
 static int visible(void)
 {
 	return ACTIVE_TABLE == HOME_TABLE;
@@ -625,10 +899,19 @@ void hp_changed(void)
 {
 }
 
-/* UP+DOWN pressed together (stock: reset to default): not used */
+/* UP+DOWN pressed together (stock: reset to default). Home: not used. EQ page: LCD 1-5 reset
+ * that band's gain to 0 dB, LCD 6-8 reset Q / GAIN / FREQ of the selected band. */
 void hp_select(int btn)
 {
-	(void)btn;
+	static const u8 mode_of_slot[3] = { 1, 0, 2 };
+	int n = shr((btn & 0xffff) - 0x92, 1);
+	if(!eq_on() || !visible() || n < 0 || n > 7)
+		return;
+	if(n < 5)
+		eq_reset(n, 0);
+	else
+		eq_reset(eq_band(), mode_of_slot[n - 5]);
+	set_dirty();
 }
 
 /* one press of LCD n UP/DOWN (button id 0x92 + 2(n-1), DOWN = odd id); auto-repeat is
@@ -640,6 +923,15 @@ void hp_step(int btn, int step)
 	(void)step;
 	if(n < 0 || n > 7)
 		return;
+	if(eq_on() && visible()) {
+		static const u8 mode_of_slot[3] = { 1, 0, 2 };
+		int band = eq_band(), mode = eq_mode();
+		if(n < 5) band = n;                      /* LCD 1-5: band */
+		else mode = mode_of_slot[n - 5];         /* LCD 6-8: Q / GAIN / FREQ */
+		set_eq(1, band, mode);
+		draw_eq(-1, 0, 0);
+		return;
+	}
 	if(n == 0)
 		set_tempo_sel();                     /* LCD 1: TEMPO, the dial changes tempo */
 	else if(n < 4)
@@ -670,6 +962,16 @@ int hp_dial(int amount, int dir)
 	int v;
 	if(!visible())
 		return orig_tempo_dial(amount, dir);
+	if(eq_on()) {
+		int b = eq_band(), m = eq_mode(), lo, hi;
+		eq_range(b, m, &lo, &hi);
+		v = eq_get(b, m) + (dir ? amount : -amount);
+		if(v < lo) v = lo;
+		if(v > hi) v = hi;
+		eq_set(b, m, v);
+		draw_eq(b, m, v);
+		return 0;
+	}
 	if(tempo_sel()) {
 		v = orig_tempo_dial(amount, dir);
 		set_dirty();
@@ -695,11 +997,41 @@ void hp_tick(void)
 	}
 	if(visible()) {
 		set_shown(1);
-		if(dirty() || (screen_sum() ^ values_sig()) != SAR3)
+		if(eq_on()) {
+			if(dirty() || (screen_sum() ^ eq_sig()) != SAR3)
+				draw_eq(-1, 0, 0);
+		} else if(dirty() || (screen_sum() ^ values_sig()) != SAR3)
 			draw_screen(-1, 0, 0);
 	} else if(shown()) {
-		/* another page or screen took over: let the stock screen repaint everything */
+		/* another page or screen took over: let the stock screen repaint everything; the EQ
+		 * page closes with it */
 		set_shown(0);
+		if(eq_on())
+			set_eq(0, eq_band(), eq_mode());
 		REPAINT_ALL = 1;
 	}
+}
+
+/* home side button F (table 0x332C24): open / close the Master EQ page */
+int hp_side_f(int btn, int arg)
+{
+	if(!visible())
+		return orig_side_f(btn, arg);
+	set_eq(!eq_on(), eq_band(), eq_mode());
+	if(eq_on())
+		draw_eq(-1, 0, 0);
+	else
+		draw_screen(-1, 0, 0);
+	return 0;
+}
+
+/* other buttons on the home panel (table 0x3B152C default): EXIT closes the EQ page */
+int hp_default(int btn, int arg)
+{
+	if(visible() && eq_on() && (btn & 0xffff) == BTN_EXIT) {
+		set_eq(0, eq_band(), eq_mode());
+		draw_screen(-1, 0, 0);
+		return 0;
+	}
+	return orig_default(btn, arg);
 }

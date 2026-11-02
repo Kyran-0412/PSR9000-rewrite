@@ -31,6 +31,9 @@ v4 = v3 + Bold text, 2 px borders, border around each control; v1-v4 are earlier
 IMPLEMENTED (full screen as mockup v7, mod v8): mod/home/ (C code + hooks), docs/HOME_MOD.md.
 Kyran wants the mockup design EXACTLY; do not invent a different layout.
 Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
+MASTER EQ page (mod v9, mockups/eq_v2.py + home_v8.py EQ tab): side button F on home opens it,
+LCD 1-5 band, LCD 6-8 Q/GAIN/FREQ, dial = value, curve graph, EXIT = home. Stock M.EQ page kept.
+EQ param API (category 12, ids 19-24) and hooks: docs/HOME_MOD.md "Master EQ page".
 
 ## Leads for the goals (main_prog.bin offsets)
 - Parts are named RIGHT 1 / RIGHT 2 / RIGHT 3 / LEFT (0x3D0060, 0x3D0FF4).

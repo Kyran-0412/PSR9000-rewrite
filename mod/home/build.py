@@ -26,7 +26,7 @@ FONTS = [  # name, file, size, characters (same fonts and sizes as mockups/home_
     ('f_small', 'Inter-Bold.otf', 10, ASCII),
     ('f_smallb', 'Inter-Bold.otf', 10, ASCII),
     ('f_name', 'Inter-Bold.otf', 14, ASCII),
-    ('f_val', 'Inter-Bold.otf', 13, '0123456789-+OFNR'),
+    ('f_val', 'Inter-Bold.otf', 13, '0123456789-+OFNR.k'),
 ]
 
 
@@ -161,6 +161,10 @@ def main():
               0x107C28, 0x108B50, 0x109A78, 0x10A94C, 0x10B2D0, 0x10B868, 0x10BADC, 0x10BB20):
         assert struct.unpack('>I', open(os.path.join(ROOT, 'firmware', 'main_prog.bin'), 'rb').read()[a:a + 4])[0] == 0x10BF60
         patches.append((a, be32(syms['hp_refresh']), 'graphics library LCD refresh -> filter'))
+    rom0 = open(os.path.join(ROOT, 'firmware', 'main_prog.bin'), 'rb').read()
+    assert rom0[0x332C24:0x332C28] == be32(0x6A124) and rom0[0x3B152C:0x3B1530] == be32(0x260670)
+    patches.append((0x332C24, be32(syms['hp_side_f']), 'home LCD F -> Master EQ page'))
+    patches.append((0x3B152C, be32(syms['hp_default']), 'home panel default handler (EXIT closes EQ)'))
     for i in range(8):     # fader value-changed callbacks -> redraw
         patches.append((0x3B1488 + 4 * i, be32(syms['hp_changed']), 'value changed callback'))
 
