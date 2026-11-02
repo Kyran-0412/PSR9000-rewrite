@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/splash.png" alt="KyranOS boot splash" width="640"></p>
+
 # KyranOS: PSR-9000 firmware mod
 
 A custom firmware mod for the **Yamaha PSR-9000** arranger keyboard (main firmware V3.06),
@@ -47,11 +49,18 @@ rewrite from scratch.
     - LCD 5–8 = VOL / BRT / REV / PAN for that layer, with the data dial changing the value.
     - Reverb DOWN = on/off, restoring the previous level.
   - Drawn with Yamaha's own bitmap fonts, flicker-free.
+<p align="center"><img src="docs/images/home.png" alt="New home screen" width="640"><br>
+<em>The new home screen, running in the emulator (every voice shows "GrandPno" there because
+the voice ROM chips are not emulated)</em></p>
+
 - **Master EQ page** (side button F on the home screen):
   - LCD 1–5 pick the band; LCD 6–8 pick Q / GAIN / FREQ; the dial changes the value.
   - A live EQ curve graph. EXIT returns home.
   - The stock Mixing Console EQ page still works too.
-- **KyranOS boot splash** (Kyran's logo).
+<p align="center"><img src="docs/images/eq.png" alt="Master EQ page" width="640"><br>
+<em>The Master EQ page</em></p>
+
+- **KyranOS boot splash** (Kyran's logo, top of this page).
 - Builds to a patch list. For the emulator the patch is applied in memory
   (`mod/home/build/apply.lua`), so the ROM files stay untouched. `make_image.py` writes patched
   firmware files with both checksums fixed, for a future real-keyboard test.
@@ -68,6 +77,9 @@ Nothing has been installed on the keyboard yet. Everything above runs in the emu
 Before the first real test, read the recovery plan in [docs/RECOVERY.md](docs/RECOVERY.md):
 the installer lives in a protected boot area, so the original firmware can be reinstalled
 from Yamaha's disks.
+
+Screenshots in `docs/images/` are emulator captures at 2x. To refresh them after a design
+change, capture again in the emulator.
 
 ## Repository layout
 
