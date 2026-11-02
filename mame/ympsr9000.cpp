@@ -452,9 +452,9 @@ template <int Ch> void psr9000_state::uart_irq_w(int state)
 
 void psr9000_state::palette_init(palette_device &palette)
 {
-	// yellow backlit LCD like Kyran's keyboard (was blue-white)
-	palette.set_pen_color(0, rgb_t(0xe6, 0xd6, 0x5a));
-	palette.set_pen_color(1, rgb_t(0x1c, 0x1e, 0x38));
+	// bright pastel yellow backlight with blue pixels, like Kyran's keyboard
+	palette.set_pen_color(0, rgb_t(0xfb, 0xf3, 0xa8));
+	palette.set_pen_color(1, rgb_t(0x36, 0x41, 0xcf));
 }
 
 void psr9000_state::map(address_map &map)
