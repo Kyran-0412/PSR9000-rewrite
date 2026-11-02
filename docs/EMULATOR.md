@@ -26,9 +26,14 @@ snapshots plus MAME's `error.log` (unmapped accesses) to `firmware/emu_out/`.
 
 ## Windows 11
 
-Plan A: a prebuilt `psr9000.exe` cross-compiled from Linux (to be tried once the driver boots).
-Then: put the exe in a folder, create `roms\psr9000\` next to it, copy `p9000m.001`-`.004`
-into it, and run `psr9000.exe psr9000 -window`.
+Plan A (DONE when the cross-build succeeds): prebuilt `psr9000.exe`, cross-compiled from Linux
+with MinGW-w64 (posix threads):
+`make windows_x64 TARGETOS=windows PTR64=1 MINGW64=/usr CROSS_BUILD=1
+ OVERRIDE_CC=x86_64-w64-mingw32-gcc OVERRIDE_CXX=x86_64-w64-mingw32-g++
+ WINDRES=x86_64-w64-mingw32-windres SUBTARGET=psr9000 SOURCES=src/mame/yamaha/ympsr9000.cpp
+ NOWERROR=1 REGENIE=1 -j4`.
+Package = the exe + `mame/windows/START_PSR9000.bat` + `mame/windows/README.txt` (ROMs not
+included: the user copies the 5 Yamaha files into `roms\psr9000`).
 
 Plan B, WSL (Ubuntu inside Windows 11, has graphics and sound):
 1. PowerShell as administrator: `wsl --install -d Ubuntu`, reboot, create a user.
@@ -168,4 +173,15 @@ flash. The firmware may complain about missing styles; we fake what is needed.
    pressed; button id = table 0x337514[row*10+col]); D0 hi lo / D8 hi lo = dial +/- (hi*16+lo).
    Service manual: panel CPU MN101C027 scans the switch matrix, drives LEDs, reads the rotary
    encoder (EC201 "TEMPO, DATA") and talks "MIDI" serial to the main board (UART ch3).
+4b. DONE (2026-11): front panel simulated in the driver (device_serial_interface on the
+   quad UART channel 3 RX line, 31250 8N2). All 148 switches are input ports ROW0-ROW16
+   (bit = column), names from the firmware switch test table. Dial: IPT_DIAL port (mouse,
+   Left/Right keys) plus DIALBTN (click halves / Up/Down keys, repeat while held), polled
+   every 10 ms. Main -> panel bytes (LED data) are logged, not shown yet.
+   Clickable panel: `mame/make_layout.py` generates `mame/psr9000.lay` (symlink it into
+   src/mame/layout/); views Full Panel / Centre Panel / Screen Only.
+   Bug found on the way: the LCD capture pulse must only fire while PE2 is in TIOC0C mode
+   (PECR2 bits 5-4 = 01); otherwise the copy chain stalls after the first redraw.
+   Test helpers: mame/press.lua (PRESS="t:ROWn:NAME;..."), mame/dial.lua, mame/bp.lua.
+   Lua note: manager.machine.time.seconds is whole seconds only; use time:as_double().
 5. Sound (SWP30 is emulated in MAME, but the wave and voice-parameter ROMs are not dumped).
