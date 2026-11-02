@@ -133,9 +133,20 @@ def main():
     if end > LIMIT:
         sys.exit('error: mod too big (%x > %x)' % (end, LIMIT))
 
+    # boot splash (mockups/splash_v1.py): our image in Yamaha's compressed format, right
+    # after the code; the boot code's pointer to the stock splash pixels (0x26010) is changed
+    run(sys.executable, os.path.join(ROOT, 'mockups', 'splash_v1.py'), OUT)
+    splash = open(os.path.join(OUT, 'splash.bin'), 'rb').read()
+    splash_at = (end + 3) & ~3
+    end = splash_at + len(splash)
+    if end > LIMIT:
+        sys.exit('error: mod + splash too big (%x > %x)' % (end, LIMIT))
+
     def be32(v): return struct.pack('>I', v)
     def be16(*ws): return b''.join(struct.pack('>H', w) for w in ws)
-    patches = [(BASE, blob, 'mod code + fonts')]
+    patches = [(BASE, blob, 'mod code + fonts'),
+               (splash_at, splash, 'KyranOS boot splash (compressed 320x240)'),
+               (0x26010, be32(splash_at), 'boot splash pixel pointer -> ours')]
     # data dial: stock handler 0x6D45C -> hp_dial (the trampoline re-runs what we overwrite)
     patches.append((0x6D45C, be16(0xD001, 0x402B, 0x0009, 0x0009) + be32(syms['hp_dial']), 'dial handler hook'))
     # end of the UI flush 0x24522: jump to hp_tick, which also does the original tail
@@ -155,7 +166,7 @@ def main():
 
     rom = open(os.path.join(ROOT, 'firmware', 'main_prog.bin'), 'rb').read()
     for a, data, why in patches:
-        if a == BASE:
+        if a >= BASE:
             assert rom[a:a + len(data)] == b'\xff' * len(data), 'free area not empty'
     js = [{'addr': a, 'bytes': data.hex(), 'what': why, 'orig': rom[a:a + len(data)].hex()} for a, data, why in patches]
     json.dump({'base': BASE, 'end': end, 'symbols': {k: v for k, v in syms.items() if k.startswith('hp_')},

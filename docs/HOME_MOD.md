@@ -58,6 +58,13 @@ LCD 1 = TEMPO box (shows the BPM; selected: the dial changes tempo, header "TEMP
 LCD 2-4 = R1/R2/R3 (selecting one gives the dial back to the controls), LCD 5-7 = VOLUME /
 BRIGHT / REVERB (LCD 7 DOWN = reverb on/off), LCD 8 free.
 
+## KyranOS boot splash (mod v7)
+mockups/splash_v1.py draws it (3D title with a dithered extrusion, faint dithered glow, retro
+perspective floor) and encodes it in Yamaha's compressed image format (~5 KB, round-trip
+checked). The boot code draws the stock splash with 0x10ABCA(fb, pixels, rect 0x3257B4, 2) at
+0x25FAE; the pixel pointer literal at 0x26010 now points to our data right after the mod code.
+Pixel 1 = light LCD colour, same polarity as Yamaha's splash.
+
 ## Flicker while turning the dial (fixed in mod v6)
 Drawing started while the previous frame was still being copied to the LCD (DMA, 20 bytes per
 step, ~30 ms per screen), so the LCD picked up a half-cleared screen about once a second.
