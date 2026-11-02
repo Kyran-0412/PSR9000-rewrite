@@ -131,6 +131,16 @@ flash. The firmware may complain about missing styles; we fake what is needed.
      ignored because the driver is not set up yet at that point; answering "bus phase 1" makes
      it think a device exists. Needs a closer look at the SPC7212 behaviour, or an
      emulator-only shortcut that skips the probe.
+   - DONE (shortcut, emulator only): init_psr9000() patches the emulated ROM copy so the SCSI
+     driver's "start command" (0x31E096) returns 0 and "fetch result" (0x31E01E) returns
+     -0x251 (selection timeout): every SCSI access sees an empty bus. The SCSI tasks no longer
+     block. Real SCSI emulation can replace this later.
+   - CURRENT BLOCKER (after the SCSI shortcut): the LCD is only written up to ~3.15s. One task
+     (stack 0x13F8xxx, message loop 0x2362C -> 0x2AC4E -> 0x2AA82 hook [0x101FFD8] -> 0x29D2A
+     callback) sends a message to mailbox 9 at 2.9s (0x234B6, OS call FEEE = wake receiver)
+     and then makes no further OS calls. Main also polls tone-generator params 08000100/0200/
+     0300 about 42x per second (answered 0 by the sub HLE), possibly waiting for a value.
+     Next: identify the mailbox-9 task and what the 08000x00 values mean.
 4. NEXT: front panel controller (MN101C027, internal mask ROM, so simulate it too). It talks to
    the main CPU on UART channel 3 (31250 baud, 8N2). Main sends 5-byte packets at boot:
    E0 0F 0F 05 08, F0 0F 0F 05 08, then 80..8x 00 00 00 00 (LED/lamp data?). The boot now idles,

@@ -114,6 +114,23 @@ void psr9000_state::init_psr9000()
 	for(int i = 0; i < 0x400/4; i++)
 		m_rom[i] = m_rom[0x20000/4 + i];
 
+	// EMULATOR-ONLY SHORTCUT (never applied to firmware for the keyboard): the SCSI controller is not
+	// emulated well enough, so make the SCSI driver's "fetch command result" routine (0x31E01E)
+	// return -0x251 (selection timeout, constant at 0x31E11A) at once. Every SCSI command then
+	// behaves like a bus with nothing connected. See docs/EMULATOR.md.
+	auto patch16 = [this](offs_t a, u16 v) {
+		u32 &w = m_rom[a >> 2];
+		w = (a & 2) ? ((w & 0xffff0000) | v) : ((w & 0x0000ffff) | (u32(v) << 16));
+	};
+	{
+		patch16(0x31e01e, 0x907c); // mov.w @(0x31e11a),r0
+		patch16(0x31e020, 0x000b); // rts
+		patch16(0x31e022, 0x0009); // nop
+		// and "start command" (0x31E096) returns 0 at once instead of waiting for the controller
+		patch16(0x31e096, 0x000b); // rts
+		patch16(0x31e098, 0xe000); // mov #0,r0
+	}
+
 	// The preset style mask ROM is not dumped.  Until it is, fill it with 125 empty
 	// "No Data" styles, using the same 512-byte header layout the firmware itself writes
 	// for empty flash styles, so style loading does not run off into garbage.
