@@ -26,7 +26,7 @@ snapshots plus MAME's `error.log` (unmapped accesses) to `firmware/emu_out/`.
 
 ## Windows 11
 
-Plan A (DONE when the cross-build succeeds): prebuilt `psr9000.exe`, cross-compiled from Linux
+Plan A (DONE 2026-11, tested under Wine): prebuilt `psr9000.exe`, cross-compiled from Linux
 with MinGW-w64 (posix threads):
 `make windows_x64 TARGETOS=windows PTR64=1 MINGW64=/usr CROSS_BUILD=1
  OVERRIDE_CC=x86_64-w64-mingw32-gcc OVERRIDE_CXX=x86_64-w64-mingw32-g++

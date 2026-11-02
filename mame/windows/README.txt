@@ -12,8 +12,10 @@ Setup (once)
       p9000m.001  p9000m.002  p9000m.003  p9000m.004  p9000s.bin
 4. Double-click START_PSR9000.bat.
    The first time it shows a red warning ("does not work"): press any key or click.
-   The first boot also builds the internal memory (STYLE, CUSTOM VOICE, ...) like a
-   factory reset. That is saved in the "nvram" folder, so later starts are quicker.
+   The FIRST start takes a few minutes: the screen shows "Initializing SETUP",
+   "Initializing STYLE", ... while the firmware formats its emulated flash memory,
+   exactly like a factory reset. Leave it running until the home screen appears, then
+   quit with Esc. This is saved in the "nvram" folder, so later starts take seconds.
 
 Using it
 - Click the panel buttons with the mouse. They light up blue while pressed.
