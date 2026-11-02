@@ -1,4 +1,5 @@
-/* New home screen for the PSR-9000 (V3.06): the agreed design, mockups/home_v3.py.
+/* New home screen for the PSR-9000 (V3.06): the agreed design, mockups/home_v4.py
+ * (v3 + bolder text, 2 px borders, a border around each control).
  *
  *   status line : style name ............................ (140 BPM)(TRP 0)(OCT 0)
  *   layers      : R1/R2/R3 cards with voice name, VOL/BRT (filled = on, dashed = off),
@@ -33,7 +34,7 @@ typedef unsigned int u32;
 #define get_transpose FW(0x51388, int (*)(void))               /* signed byte */
 #define get_octave   FW(0x4005e, int (*)(void))                /* 0..2 = -1..+1 */
 #define STYLE_NAME   (*(const char *volatile *)0x108f098)      /* set by the stock home screen */
-#define lcd_refresh  FW(0x10bf60, int (*)(u8 *fb, const short *rect))   /* 0 = queued */
+#define lcd_refresh  FW(0x10bf60, void (*)(u8 *fb, const short *rect))
 #define ui_flush_fn  FW(0x10bb0c, void (*)(void))
 #define FRAMEBUFFER  ((u8 *)0x10c8aec)
 /* Button table of whatever screen gets panel events right now: 0x3B152C = MAIN VOLUME page
@@ -203,12 +204,19 @@ static void rrect(int x0, int y0, int x1, int y1, int r, int filled, int on)
 	}
 }
 
-/* mockup dashed_box: dots every 4 px, 6 px in from the corners */
+/* PIL rounded_rectangle outline with width=2 (outer edge + one pixel inside) */
+static void rrect2(int x0, int y0, int x1, int y1, int r, int on)
+{
+	rrect(x0, y0, x1, y1, r, 0, on);
+	rrect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, r > 1 ? r - 1 : 1, 0, on);
+}
+
+/* mockup v4 dashed_box: 2x2 dashes every 5 px, 6 px in from the corners */
 static void dashed_box(int x0, int y0, int x1, int y1)
 {
 	int x, y;
-	for(x = x0 + 6; x < x1 - 5; x += 4) { px(x, y0, K); px(x, y1, K); }
-	for(y = y0 + 6; y < y1 - 5; y += 4) { px(x0, y, K); px(x1, y, K); }
+	for(x = x0 + 6; x < x1 - 6; x += 5) { fill(x, y0, x + 1, y0 + 1, K); fill(x, y1 - 1, x + 1, y1, K); }
+	for(y = y0 + 6; y < y1 - 6; y += 5) { fill(x0, y, x0 + 1, y + 1, K); fill(x1 - 1, y, x1, y + 1, K); }
 }
 
 static const glyph_t *find_glyph(const font_t *f, char c)
@@ -375,7 +383,7 @@ static void draw_screen(int op, int oc, int ov)
 		else if(i == 1) { e = cat(buf, "TRP "); num(e, (signed char)get_transpose(), 1); }
 		else { e = num(buf, get_tempo(), 0); cat(e, " BPM"); }
 		w = text_width(&f_tiny, buf) + 10;
-		rrect(x - w, 3, x, 15, 6, 0, K);
+		rrect2(x - w, 3, x, 15, 6, K);
 		text(x - half(w), 9, buf, &f_tiny, K, 'm');
 		x -= w + 4;
 	}
@@ -392,10 +400,10 @@ static void draw_screen(int op, int oc, int ov)
 		} else {
 			dashed_box(30, y, W - 31, y + 26);
 			fg = K;
-			rrect(36, y + 6, 56, y + 19, 6, 0, K);
+			rrect2(36, y + 6, 56, y + 19, 6, K);
 		}
 		text(46, y + 13, part_label[i], &f_tiny, K, 'm');
-		text(64, y + 13, name[i], on[i] ? &f_name : &f_reg, fg, 'l');
+		text(64, y + 13, name[i], &f_name, fg, 'l');
 		if(on[i]) {
 			e = cat(buf, "VOL ");
 			e = num(e, val(i, 0, op, oc, ov), 0);
@@ -435,7 +443,7 @@ static void draw_screen(int op, int oc, int ov)
 			int fg;
 			x = i * 40;
 			if(i == sp) { rrect(x + 5, top + 20, x + 35, top + 44, 8, 1, K); fg = WT; }
-			else { rrect(x + 5, top + 20, x + 35, top + 44, 8, 0, K); fg = K; }
+			else { rrect2(x + 5, top + 20, x + 35, top + 44, 8, K); fg = K; }
 			text(x + 20, top + 32, part_label[i], &f_val, fg, 'm');
 			text(x + 20, top + 56, on[i] ? "ON" : "OFF", &f_tiny, K, 'm');
 			short_name(buf, name[i]);
@@ -447,15 +455,15 @@ static void draw_screen(int op, int oc, int ov)
 			int fg, v, y0 = top + 54, y1 = H - 22, fh;
 			x = (j + 3) * 40;
 			if(j >= 3) {                     /* free slot: faint dashed outline only */
-				dashed_box(x + 4, top + 18, x + 36, H - 4);
+				dashed_box(x, top + 17, x + 38, H - 3);
 				continue;
 			}
 			v = val(sp, j, op, oc, ov);
-			if(j == sc) { rrect(x + 3, top + 17, x + 37, H - 3, 7, 1, K); fg = WT; }
-			else fg = K;
-			text(x + 20, top + 26, ctrl_name[j], &f_tiny, fg, 'm');
+			if(j == sc) { rrect(x, top + 17, x + 38, H - 3, 7, 1, K); fg = WT; }
+			else { rrect(x, top + 17, x + 38, H - 3, 7, 0, K); fg = K; }
+			text(x + 19, top + 27, ctrl_name[j], &f_tiny, fg, 'm');
 			num(buf, v, 0);
-			text(x + 20, top + 41, buf, &f_val, fg, 'm');
+			text(x + 19, top + 41, buf, &f_val, fg, 'm');
 			for(y = y0; y <= y1; y += 2)
 				px(x + 20, y, fg);
 			fh = 0;
@@ -464,16 +472,14 @@ static void draw_screen(int op, int oc, int ov)
 				rrect(x + 17, y1 - fh, x + 23, y1, 3, 1, fg);
 			if(j == 2) {                     /* REVERB on/off pill */
 				if(v) { rrect(x + 9, H - 16, x + 31, H - 6, 5, 1, fg); text(x + 20, H - 11, "ON", &f_tiny, fg == K ? WT : K, 'm'); }
-				else { rrect(x + 9, H - 16, x + 31, H - 6, 5, 0, fg); text(x + 20, H - 11, "OFF", &f_tiny, fg, 'm'); }
+				else { rrect2(x + 9, H - 16, x + 31, H - 6, 5, fg); text(x + 20, H - 11, "OFF", &f_tiny, fg, 'm'); }
 			}
 		}
 	}
 
+	lcd_refresh(FRAMEBUFFER, rect);
 	SAR3 = screen_sum() ^ values_sig();
-	if((lcd_refresh(FRAMEBUFFER, rect) & 0xff) == 0)
-		clear_dirty();
-	else
-		set_dirty();     /* LCD queue full: send it again on the next UI flush */
+	clear_dirty();
 }
 
 static int visible(void)
@@ -483,10 +489,11 @@ static int visible(void)
 
 /* ---- hooks ---- */
 
-/* value-changed callbacks of the 8 stock faders (table 0x3B1488): redraw */
+/* update callbacks of the 8 stock faders (table 0x3B1488). The firmware calls them about once
+ * a second whether or not anything changed, so they must not force a redraw (that was the
+ * flicker); real changes are caught by values_sig() in hp_tick. */
 void hp_changed(void)
 {
-	set_dirty();
 }
 
 /* UP+DOWN pressed together (stock: reset to default): not used */
@@ -544,8 +551,11 @@ int hp_dial(int amount, int dir)
 void hp_tick(void)
 {
 	if(FLUSH_FLAG) {
+		/* The stock flush copies the stock home screen over ours (about once a second) and
+		 * would make our screen flicker; while our screen is up there is nothing to flush. */
 		FLUSH_FLAG = 0;
-		ui_flush_fn();
+		if(!visible())
+			ui_flush_fn();
 	}
 	if(visible()) {
 		set_shown(1);

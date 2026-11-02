@@ -21,12 +21,11 @@ PFX = 'sh4-linux-gnu-'
 INTER = '/usr/share/fonts/opentype/inter/'
 
 ASCII = ''.join(chr(c) for c in range(33, 127))
-FONTS = [  # name, file, size, characters (same fonts and sizes as mockups/home_v3.py)
-    ('f_tiny', 'Inter-SemiBold.otf', 8, ASCII),
-    ('f_small', 'Inter-Medium.otf', 10, ASCII),
+FONTS = [  # name, file, size, characters (same fonts and sizes as mockups/home_v4.py)
+    ('f_tiny', 'Inter-Bold.otf', 8, ASCII),
+    ('f_small', 'Inter-Bold.otf', 10, ASCII),
     ('f_smallb', 'Inter-Bold.otf', 10, ASCII),
     ('f_name', 'Inter-Bold.otf', 14, ASCII),
-    ('f_reg', 'Inter-Regular.otf', 14, ASCII),
     ('f_val', 'Inter-Bold.otf', 13, '0123456789-+OFNR'),
 ]
 

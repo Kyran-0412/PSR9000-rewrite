@@ -1,4 +1,4 @@
-# New home screen (mod v2: the agreed design, mockups/home_v3.py)
+# New home screen (mod v3: the agreed design, mockups/home_v4.py)
 
 Draws the whole home screen like the v3 mockup:
 - status line: style name, (BPM) (TRP) (OCT) pills;
@@ -45,6 +45,12 @@ is known, so the state lives in the unused DMA channel 3 registers (SAR3/DAR3/DM
 - Real image: `python3 mod/home/make_image.py` -> `firmware/mod/p9000m.002-.004` with Rom
   Chk1 and the byte sum fixed (only .002 and .004 change). Boots in the emulator from the
   files alone. NOT tested on the keyboard; follow docs/RECOVERY.md first.
+
+## Flicker (fixed in mod v3)
+Two causes, both about redrawing once a second although nothing changed: the stock fader
+"update" callbacks are polled every second (they no longer mark the screen dirty), and the
+stock UI flush (0x10BB0C) copies the stock screen over ours about once a second (skipped while
+our screen is up). Verified in the emulator: no framebuffer writes at all over 14 s idle.
 
 ## Known limits / ideas
 - The stock home screen keeps running underneath and sometimes redraws a widget; the new

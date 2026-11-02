@@ -5,5 +5,4 @@ extern const font_t f_tiny;
 extern const font_t f_small;
 extern const font_t f_smallb;
 extern const font_t f_name;
-extern const font_t f_reg;
 extern const font_t f_val;

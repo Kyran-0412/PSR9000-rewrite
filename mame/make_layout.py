@@ -71,9 +71,9 @@ btn(5, 5, '', 700, 62, 22, 22, 'disk', top='SOUND CREATOR')
 btn(5, 6, '', 700, 104, 22, 22, 'disk', top='DIGITAL REC')
 btn(5, 7, '', 700, 146, 22, 22, 'disk', top='MIXING CONSOLE')
 for i, (r, c, lab) in enumerate([(5, 8, 'A'), (6, 0, 'B'), (6, 1, 'C'), (6, 2, 'D'), (6, 3, 'E')]):
-    btn(r, c, lab, SX - 26, SY + 18 + 46 * i, 22, 30)
+    btn(r, c, lab, SX - 26, SY + 12 + 39 * i, 22, 30)
 for i, (r, c, lab) in enumerate([(14, 0, 'F'), (14, 1, 'G'), (14, 2, 'H'), (14, 3, 'I'), (14, 4, 'J')]):
-    btn(r, c, lab, SX + 324, SY + 18 + 46 * i, 22, 30)
+    btn(r, c, lab, SX + 324, SY + 12 + 39 * i, 22, 30)
 
 text('MULTI PAD', 652, 186, 100)
 btn(6, 4, 'STOP', 652, 204, 30, 18)

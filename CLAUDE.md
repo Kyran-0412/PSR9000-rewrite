@@ -20,8 +20,9 @@ firmware (hook/replace screens and handlers, new code in free space), not a from
 4. Display is 1-bit; LCD tint is hardware. Kyran wants a more modern look: flat, Inter-style
    font baked to bitmaps, rounded cards, inverted highlight for selection.
 5. More later.
-Current layout: mockups/home_v3.py (v1/v2 are earlier drafts).
-IMPLEMENTED (full screen as mockup v3, mod v2): mod/home/ (C code + hooks), docs/HOME_MOD.md.
+Current layout: mockups/home_v4.py (= v3 + Bold text, 2 px borders, border around each control;
+v1-v3 are earlier drafts).
+IMPLEMENTED (full screen as mockup v4, mod v3): mod/home/ (C code + hooks), docs/HOME_MOD.md.
 Kyran wants the mockup design EXACTLY; do not invent a different layout.
 Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
 
