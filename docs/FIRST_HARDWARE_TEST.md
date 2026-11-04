@@ -6,7 +6,7 @@ not in this repository):
 | Set | What changes | Built with |
 |---|---|---|
 | TEST 1 | only the boot splash (KyranOS logo); everything else stock | `make_image.py --splash-only` |
-| TEST 2 | the full mod: splash, new home screen, Master EQ page | `make_image.py` |
+| TEST 2 | the full mod: splash, new home screen, Master EQ page, setlist | `make_image.py` |
 
 Both change only `p9000m.002` and `p9000m.004` (MAIN PROGRAM disks 2 and 4). Disks 1 and 3
 are Yamaha's files, unchanged. The SUB PROGRAM is never touched: do not use the installer's
@@ -64,6 +64,13 @@ Disks 1 and 3 can be shared between both sets and your original set (they are id
    - Side button F: Master EQ page; LCD 1-5 band, LCD 6-8 Q/GAIN/FREQ, dial; EXIT back home.
      Compare the values with the stock M.EQ page (MIXING CONSOLE) and listen.
    - Voice changes, part on/off, transpose/octave, style selection: the home screen follows.
+   - Side button G: setlist (docs/SETLIST.md). Use a spare floppy for it, not one of the
+     update disks. Create a song (NEW), give it a title (NAME), pick a registration memory that
+     you have stored, SAVE, then OPEN it:
+     - the registration should load, and both lights should go solid (MIDI SENT, REGIST LOADED);
+     - with FL Studio connected to MIDI OUT, the drone should change.
+     Switch off and on, press G: the song should come back from the floppy. Check the floppy on
+     a PC: it should hold KYRANOS.SET.
    - Normal use for a while: menus, registration memory, styles, MIXER, other pages.
 
 ## If something goes wrong

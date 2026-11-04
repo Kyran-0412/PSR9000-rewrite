@@ -583,6 +583,18 @@ static void draw_screen(int op, int oc, int ov)
 			hspan(W - 9, W - 9 + 4 - k, 28 + k, WT);
 		}
 	}
+	/* v12: side button G opens the setlist */
+	rrect(W - 28, 59, W - 2, 75, 6, 1, K);
+	text(W - 18, 67, "SET", FT_LABEL, WT, 'm');
+	{
+		static const u8 tw[5] = { 3, 2, 2, 1, 0 };
+		int k;
+		for(k = 0; k <= 4; k++)                  /* triangle (W-7,63) (W-4,67) (W-7,71) */
+		{
+			hspan(W - 7, W - 7 + tw[k], 67 - k, WT);
+			hspan(W - 7, W - 7 + tw[k], 67 + k, WT);
+		}
+	}
 
 	e = cat(buf, "LEFT  ");
 	copy_name(e, voice_name(3), 20);
@@ -929,6 +941,19 @@ static int visible(void)
 	return ACTIVE_TABLE == HOME_TABLE;
 }
 
+#include "setlist.c"
+
+typedef char sl_fits_in_a_pool_block[sizeof(struct sl) <= 256 ? 1 : -1];
+
+/* redraw whatever is on top: a setlist screen or the home screen */
+static void sl_redraw(struct sl *s)
+{
+	if(s && s->mode != M_HOME)
+		sl_draw(s);
+	else
+		draw_screen(-1, 0, 0);
+}
+
 /* ---- hooks ---- */
 
 /* LCD refresh requests of the stock graphics library (its 16 pointers to 0x10BF60 now point
@@ -956,7 +981,7 @@ void hp_select(int btn)
 {
 	static const u8 mode_of_slot[3] = { 1, 0, 2 };
 	int n = shr((btn & 0xffff) - 0x92, 1);
-	if(!eq_on() || !visible() || n < 0 || n > 7)
+	if(!eq_on() || !visible() || n < 0 || n > 7 || sl_shown())
 		return;
 	if(n < 5)
 		eq_reset(n, 0);
@@ -971,9 +996,15 @@ void hp_step(int btn, int step)
 {
 	int n = shr((btn & 0xffff) - 0x92, 1);   /* 0..7 = LCD 1..8 */
 	int down = btn & 1;
+	struct sl *s = sl_shown();
 	(void)step;
 	if(n < 0 || n > 7)
 		return;
+	if(s) {
+		sl_button(s, n);
+		sl_redraw(s);
+		return;
+	}
 	if(eq_on() && visible()) {
 		static const u8 mode_of_slot[3] = { 1, 0, 2 };
 		int band = eq_band(), mode = eq_mode();
@@ -1011,8 +1042,14 @@ void hp_step(int btn, int step)
 int hp_dial(int amount, int dir)
 {
 	int v;
+	struct sl *s;
 	if(!visible())
 		return orig_tempo_dial(amount, dir);
+	if((s = sl_shown())) {
+		sl_dial(s, dir ? amount : -amount);
+		sl_draw(s);
+		return 0;
+	}
 	if(eq_on()) {
 		int b = eq_band(), m = eq_mode(), lo, hi;
 		eq_range(b, m, &lo, &hi);
@@ -1039,6 +1076,9 @@ int hp_dial(int amount, int dir)
 /* end of the UI flush (0x24522): first the original tail, then our redraw if needed */
 void hp_tick(void)
 {
+	struct sl *s = sl_find();
+	if(s && sl_poll(s))
+		set_dirty();                         /* a status light changed */
 	if(FLUSH_FLAG) {
 		/* The stock flush copies the stock home screen over ours (about once a second) and
 		 * would make our screen flicker; while our screen is up there is nothing to flush. */
@@ -1072,14 +1112,20 @@ void hp_tick(void)
 		if(eq_on()) {
 			if(dirty() || (screen_sum() ^ eq_sig()) != SAR3)
 				draw_eq(-1, 0, 0);
+		} else if(s && s->mode != M_HOME) {
+			if(dirty() || screen_sum() != SAR3)
+				sl_draw(s);
 		} else if(dirty() || (screen_sum() ^ values_sig()) != SAR3)
 			draw_screen(-1, 0, 0);
 	} else if(shown()) {
 		/* another page or screen took over: let the stock screen repaint everything; the EQ
-		 * page closes with it */
+		 * page closes with it. A setlist screen stays and comes back with the home screen;
+		 * an open question closes (nothing was changed yet). */
 		set_shown(0);
 		if(eq_on())
 			set_eq(0, eq_band(), eq_mode());
+		if(s)
+			s->dlg = D_NONE;
 		REPAINT_ALL = 1;
 	}
 }
@@ -1091,11 +1137,22 @@ void hp_tick(void)
 int hp_side(int btn, int arg)
 {
 	int b = btn & 0xffff;
+	struct sl *s;
 	if(!visible()) {
 		if(b == 0x88) return FW(0x6a0b8, int (*)(int, int))(btn, arg);
 		if(b == 0x8d) return orig_side_f(btn, arg);
 		if(b == 0x8e) return FW(0x6a142, int (*)(int, int))(btn, arg);
 		if(b == 0x8f) return FW(0x6a160, int (*)(int, int))(btn, arg);
+		return 0;                            /* B-E, I, J: no stock action */
+	}
+	if((s = sl_shown())) {                   /* setlist screens use all ten */
+		sl_side(s, b - 0x88);
+		sl_redraw(s);
+		return 0;
+	}
+	if(b == 0x8e && !eq_on()) {              /* G: setlist */
+		sl_enter();
+		sl_redraw(sl_find());
 		return 0;
 	}
 	if(b != 0x8d)
@@ -1108,9 +1165,28 @@ int hp_side(int btn, int arg)
 	return 0;
 }
 
-/* other buttons on the home panel (table 0x3B152C default): EXIT closes the EQ page */
+/* event table entry for the home side buttons that had none (B-E, I, J): the table at
+ * 0x332C60 points at {handler, 0, 0, repeat} entries like 0x332C14 */
+const struct { int (*fn)(int, int); u32 a, b, c; } hp_side_entry = { hp_side, 0, 0, 0x00640000 };
+
+/* other buttons on the home panel (table 0x3B152C default): EXIT closes the EQ page or goes
+ * one level back on the setlist screens */
 int hp_default(int btn, int arg)
 {
+	struct sl *s;
+	int b = btn & 0xffff;
+	if(visible() && (s = sl_shown())) {
+		if(b == BTN_EXIT) {
+			sl_exit(s);
+			sl_redraw(s);
+			return 0;
+		}
+		if(b >= 0x88 && b <= 0x91) {         /* side E and J arrive here (the mixer panel claims them) */
+			sl_side(s, b - 0x88);
+			sl_redraw(s);
+			return 0;
+		}
+	}
 	if(visible() && eq_on() && (btn & 0xffff) == BTN_EXIT) {
 		set_eq(0, eq_band(), eq_mode());
 		draw_screen(-1, 0, 0);

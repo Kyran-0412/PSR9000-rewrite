@@ -31,9 +31,9 @@ FORBIDDEN = re.compile(r'^(shad|shld|pref|movca\.l|ocbi|ocbp|ocbwb|ldtlb|clrs|se
 def main():
     os.makedirs(OUT, exist_ok=True)
     flags = ['-m4-nofpu', '-mb', '-mrenesas', '-O2', '-ffreestanding', '-fno-pic', '-fno-builtin',
-             '-fno-jump-tables', '-nostdlib', '-I', HERE, '-Wall']
+             '-fno-jump-tables', '-fno-tree-loop-distribute-patterns', '-nostdlib', '-I', HERE, '-Wall']
     objs = []
-    for src in ('hp.c', 'tramp.S'):
+    for src in ('hp.c', 'tramp.S'):   # hp.c includes setlist.c
         o = os.path.join(OUT, os.path.basename(src) + '.o')
         run(CC, *flags, '-c', os.path.join(HERE, src), '-o', o)
         objs.append(o)
@@ -110,6 +110,23 @@ def main():
         assert rom0[a:a + 4] == be32(orig)
         patches.append((a, be32(syms['hp_side']), 'home side button ' + what))
     patches.append((0x3B152C, be32(syms['hp_default']), 'home panel default handler (EXIT closes EQ)'))
+    # side buttons without a stock action on the home screen (B-E, I, J): give them an entry so
+    # the setlist screens can use them (table 0x332C54: PAGE NEXT, BACK, EXIT, A-J, LCD 1-8 UP/DOWN)
+    for slot, name in ((0x332C64, 'B'), (0x332C68, 'C'), (0x332C6C, 'D'), (0x332C70, 'E'),
+                       (0x332C80, 'I'), (0x332C84, 'J')):
+        assert rom0[slot:slot + 4] == be32(0)
+        patches.append((slot, be32(syms['hp_side_entry']), 'home side button %s -> setlist' % name))
+    # ... and switch them on: one byte per slot at 0x332CC8 (same order as 0x332C54: PAGE NEXT,
+    # BACK, EXIT, A-J, LCD 1-8 UP/DOWN); 3 = on, as for A, F, G, H
+    for idx, name in ((4, 'B'), (5, 'C'), (6, 'D'), (7, 'E'), (11, 'I'), (12, 'J')):
+        assert rom0[0x332CC8 + idx] == 0
+        patches.append((0x332CC8 + idx, bytes([3]), 'home side button %s: enabled' % name))
+    # the mixer panel under the home screen claims E and J (flag 2 in its list 0x3B163C, no
+    # handler of its own; pressing E there blocked all further panel input under our screen):
+    # release them so the entries above get the presses
+    for idx, name in ((7, 'E'), (12, 'J')):
+        assert rom0[0x3B163C + idx] == 2
+        patches.append((0x3B163C + idx, bytes([0]), 'mixer panel: release side button %s' % name))
     for i in range(8):     # fader value-changed callbacks -> redraw
         patches.append((0x3B1488 + 4 * i, be32(syms['hp_changed']), 'value changed callback'))
 

@@ -462,6 +462,10 @@ TIMER_CALLBACK_MEMBER(psr9000_state::scsi_timeout)
 
 // Quad UART interrupts: 0x9800A3 reads which channels are interrupting (IRQ2 handler 0x1255FA:
 // bit0 -> 0x8A3C8, bit1 -> 0x8A3C2, bit3 -> 0x8AE88). All of them drive main IRQ2.
+// IRQ2 is edge-triggered (the handler clears its flag in the ISR at 0xFFFF835A) and serves each
+// pending channel once per interrupt, so every channel that starts interrupting must make a new
+// edge, even while another channel still holds the line. With a plain OR of the four lines,
+// MIDI A and B sending at the same time left the line high for good and MIDI output stopped.
 template <int Ch> void psr9000_state::uart_irq_w(int state)
 {
 	u8 old = m_uart_irq;
@@ -469,9 +473,10 @@ template <int Ch> void psr9000_state::uart_irq_w(int state)
 		m_uart_irq |= 1 << Ch;
 	else
 		m_uart_irq &= ~(1 << Ch);
-	if(!old && m_uart_irq)
+	if(state && !(old & (1 << Ch))) {
+		m_maincpu->set_input_line(2, CLEAR_LINE);
 		m_maincpu->set_input_line(2, ASSERT_LINE);
-	else if(old && !m_uart_irq)
+	} else if(old && !m_uart_irq)
 		m_maincpu->set_input_line(2, CLEAR_LINE);
 }
 
@@ -497,9 +502,13 @@ void psr9000_state::map(address_map &map)
 	map(0x00c80001, 0x00c80001).rw(m_lcdc, FUNC(sed1330_device::data_r), FUNC(sed1330_device::command_w));
 	// 0xc00000-2: HD63266F FDC (msr / fifo / extstat). Status poll loop at 0x317786.
 	map(0x00c00000, 0x00c00003).m(m_fdc, FUNC(hd63266f_device::map));
-	// DMA reads of the data register: on the board the DMA acknowledge makes the controller
-	// hand over its data byte; MAME's model only does that through dma_r().
-	map(0x00c00000, 0x00c00003).lr8(NAME([this](offs_t) { return m_fdc_drq ? m_fdc->dma_r() : m_fdc->fifo_r(); })).umask32(0x00ff0000);
+	// DMA transfers through the data register: on the board the DMA acknowledge makes the
+	// controller hand over (disk read) or take (disk write) its data byte; MAME's model only does
+	// that through dma_r() / dma_w(). Without the write half every sector written to the floppy
+	// came out as zeros.
+	map(0x00c00000, 0x00c00003).lrw8(
+			NAME([this](offs_t) { return m_fdc_drq ? m_fdc->dma_r() : m_fdc->fifo_r(); }),
+			NAME([this](offs_t, u8 data) { if(m_fdc_drq) m_fdc->dma_w(data); else m_fdc->fifo_w(data); })).umask32(0x00ff0000);
 	// +2: bit set/reset register (MAME's model has only a read-only status there). Writes:
 	// 0xE0 | bits = set, 0xD0 | bits = clear (0xFF at reset). Reads give the bits back in the low
 	// nibble (bit 0 = motor on, polled by the floppy task) with the interrupt in bit 6; bit 7 is

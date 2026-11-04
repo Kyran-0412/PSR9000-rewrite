@@ -37,6 +37,7 @@ rewrite from scratch.
   (whole-number zoom).
 - Floppy drive: style files (.sty) load from disk images into the style flash, exactly like
   on the keyboard (Style Manager), and play; `tools/make_floppy.py` builds the disk images.
+  Writing to disk works too (the setlist file).
 - MIDI A/B ports connected to the PC: the emulated keyboard's MIDI OUT can play a Windows synth
   or, through a virtual MIDI cable (loopMIDI), VST instruments such as Keyscape; MIDI IN takes a
   USB MIDI keyboard.
@@ -65,6 +66,21 @@ the voice ROM chips are not emulated)</em></p>
   - The stock Mixing Console EQ page still works too.
 <p align="center"><img src="docs/images/eq.png" alt="Master EQ page" width="640"><br>
 <em>The Master EQ page</em></p>
+
+- **Setlist / Performance mode** (side button G on the home screen):
+  - A setlist of up to 20 songs, each with a title, key, BPM, arrangement (up to 16 sections,
+    numbered automatically), FL Studio configuration and registration memory.
+  - Songs can be created, edited, moved, copied and deleted. Titles are typed on a naming
+    screen like Yamaha's.
+  - The setlist is saved as `KYRANOS.SET` on the floppy.
+  - Opening a song (or a confirmed PREV / NEXT) recalls its registration and sends the FL
+    configuration (channel 15) and key (channel 16) as MIDI notes. Two status lights show
+    whether the MIDI went out and whether the registration loaded.
+  - FL Studio script for the drones: [tools/fl_studio](tools/fl_studio).
+  - Details and tests: [docs/SETLIST.md](docs/SETLIST.md).
+<p align="center"><img src="docs/images/setlist.png" alt="Setlist" width="400">
+<img src="docs/images/performance.png" alt="Performance screen" width="400"><br>
+<em>The setlist and the performance screen in the emulator</em></p>
 
 - **KyranOS boot splash** (Kyran's logo, top of this page).
 - Builds to a patch list. For the emulator the patch is applied in memory
@@ -96,7 +112,7 @@ change, capture again in the emulator.
 | `mod/home/` | The firmware mod: C code (`hp.c`), build script, patch output |
 | `mockups/` | Python mockups of every screen design (`home_v10.py`, `eq_v3.py` are current) |
 | `mame/` | MAME driver (`ympsr9000.cpp`), panel layout, core patches, test scripts, Windows start files |
-| `tools/` | Checksum, image extractor, disassembly helpers |
+| `tools/` | Checksum, image extractor, disassembly helpers, floppy image builder, FL Studio script |
 | `docs/` | Emulator notes, mod notes, test report, recovery plan |
 | `firmware/`, `docs/private/` | Yamaha files (git-ignored, never committed) |
 

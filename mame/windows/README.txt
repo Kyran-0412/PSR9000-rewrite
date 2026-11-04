@@ -81,3 +81,14 @@ Floppy disks and styles
   there is still no sound inside the emulator.
 - Make your own disk images from .sty files: python tools/make_floppy.py out.img *.sty
   (in the GitHub repository).
+
+Setlist (new home screen, side button G)
+- The setlist is saved on the floppy as KYRANOS.SET. Use the empty disk image
+  disks\SETLIST.img for it: set FLOPPY=disks\SETLIST.img in START_PSR9000_NEW_HOME.bat, or
+  swap it in with Tab > File Manager. The emulator writes to the .img file, so the setlist is
+  still there next time.
+- Opening a song sends its FL configuration (MIDI channel 15) and key (channel 16) out of MIDI A
+  and B, so with START_PSR9000_MIDI.bat and loopMIDI the FL Studio script can be tried on the PC.
+- The registration memories are empty in a fresh emulator: store some first (MEMORY + REGIST n),
+  otherwise the performance screen shows REGIST FAILED.
+- How it works: docs/SETLIST.md in the GitHub repository.

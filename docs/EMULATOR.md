@@ -194,6 +194,14 @@ firmware sends active sensing (FE) every 200 ms on both ports, and a voice chang
 select / program change / controllers plus XG SysEx (F0 43 10 4C ...). What else is sent follows
 the firmware's FUNCTION > MIDI transmit settings (template "All Parts" includes the style parts
 RHY1..PHR2). Windows: `START_PSR9000_MIDI.bat`, `LIST_MIDI_PORTS.bat`; VST route via loopMIDI.
+Fixed 2026-11 (found with the setlist): MIDI output stopped for good when MIDI A and B were
+busy at the same time.
+- IRQ2 is edge-triggered: the handler 0x1255FA clears its ISR flag and serves each pending
+  channel once.
+- The driver ORed the four UART interrupt lines, so a channel that started interrupting while
+  another still held the line made no new edge. Once both send interrupts were pending, the
+  line never dropped again.
+- Now every channel that starts interrupting gives a fresh edge (`uart_irq_w`).
 
 ## Floppy drive (2026-11, WORKING: styles load from disk images)
 Load styles the way the keyboard does: STYLE > STYLE MANAGER [LCD 8] > LOAD STYLE INTO FLASH ROM
@@ -224,4 +232,18 @@ What it took (driver + core patches):
 - File system notes: mount 0x316A4E (seek, FAT sector check 0x316BA0, boot sector compared with
   templates 0x3D50AC "EMI-DOS" 1.44 MB / 720 KB, 13 bytes from 0x0B), status strings
   "No Disk / Unformat Disk / UnsupportDisk" 0x348420.
-Not done: 720 KB (DD) disks (would need the 250 kbit/s rate), writing to disk untested.
+- WRITING (fixed 2026-11, found with the setlist): DMA writes to the data register must go
+  through `dma_w()`, like reads through `dma_r()`. Before this, every sector the firmware wrote
+  came out as zeros, wiping the root directory and the FAT bytes. Verified: the setlist file
+  KYRANOS.SET is created, replaced and read back. A PC FAT reader sees it, with the long-name
+  entry replaced cleanly.
+Not done: 720 KB (DD) disks (would need the 250 kbit/s rate).
+
+## Known emulator problem: occasional hang at start-up
+- Now and then MAME hangs before the first emulated second: no Lua periodic callback runs and
+  the process spins.
+- It happens with or without a floppy, and more often with `-debug` together with a floppy
+  (that combination never got past start-up in testing).
+- Cause not found. Starting again works. The scripted test runner used for the setlist tests
+  restarts a run that shows no sign of life within 40 s.
+

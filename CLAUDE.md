@@ -40,6 +40,13 @@ Emulator test pass vs the V3 manual: docs/TEST_REPORT.md.
 MASTER EQ page (mod v9, mockups/eq_v2.py + home_v8.py EQ tab): side button F on home opens it,
 LCD 1-5 band, LCD 6-8 Q/GAIN/FREQ, dial = value, curve graph, EXIT = home. Stock M.EQ page kept.
 EQ param API (category 12, ids 19-24) and hooks: docs/HOME_MOD.md "Master EQ page".
+SETLIST / PERFORMANCE MODE (mod v13, mockups/setlist_v1.py + home_v12.py SET tab on side G),
+code mod/home/setlist.c, everything in docs/SETLIST.md: songs stored as KYRANOS.SET on the floppy
+(low-level FS calls open/read/write/close/delete 0x30243E/0x302510/0x3025A6/0x302482/0x302618,
+flush 0x22CD06), RAM = 5 blocks of kernel pool 1 (get 0x22BA4), MIDI via 0x2562FC (ch15 config
+note, ch16 key note 60-71), registration via messages (11,1,bank) + (11,5,mem). Kyran's choices:
+max 20 songs / 15-char titles / 16 sections, root keys shown with flats, BPM display only, I/J
+scroll, YES = side G / NO = side H. FL Studio script: tools/fl_studio/ (sharps).
 EMULATOR extras: MIDI A/B to the PC (-midiout1/-midiin1); FLOPPY WORKS (styles from Kyran's
 downloaded PSR-9000 style set load via Style Manager and play; disk images in firmware/styles/,
 tools/make_floppy.py; details docs/EMULATOR.md "Floppy drive"). MAME core patches: mame/patches/.

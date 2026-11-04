@@ -38,6 +38,7 @@ buttons, i.e. home screen visible); framebuffer 0x10C8AEC (40 bytes/row, bit 7 =
 1 = dark); 0x10BF60(fb, rect{x,y,w,h}) sends a rectangle to the LCD; parameters posted with
 0x25CE4(2, id, 2, [part, value]) (id 5 volume, 10 brightness, 11 reverb send). No spare RAM
 is known, so the state lives in the unused DMA channel 3 registers (SAR3/DAR3/DMATCR3).
+The setlist (below) is the exception: it takes 5 blocks from the kernel's block pool.
 
 ## Testing
 - Emulator, in memory: `-autoboot_script mod/home/build/apply.lua` (Windows:
@@ -151,6 +152,15 @@ the same settings.
   ROM tables like 0x332C14 (home LCD E-H).
 - Emulator: the preset name is not shown (the faked tone generator leaves the preset value
   outside 0-3).
+
+## Setlist / Performance mode (mod v13, mockups/setlist_v1.py + home_v12.py)
+- Side button G on the home screen ("SET" tab under EQ) opens it. Code: `setlist.c`.
+- How to use it, the firmware calls behind it, and the tests: docs/SETLIST.md.
+- Extra hooks:
+  - the home screen's button table 0x332C54 gets entries for side buttons B-E, I and J,
+    enabled at 0x332CC8;
+  - the mixer panel's claim on E and J (0x3B163C) is cleared;
+  - hp_default also handles EXIT and E / J on the setlist screens.
 
 ## Known limits / ideas
 - The stock home screen keeps running underneath and sometimes redraws a widget; the new

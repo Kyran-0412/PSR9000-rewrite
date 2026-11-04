@@ -35,9 +35,12 @@ Done and verified in the emulator:
 - New home screen (status bar, layer cards, TEMPO/parts/controls row, dial edits values,
   reverb on/off, PAN knob), Master EQ page, KyranOS splash, flicker fixes, style name follows
   the current style, stock side-button actions disabled. Details: `docs/HOME_MOD.md`.
+- Setlist / Performance mode (side button G on home), built from Kyran's spec and the
+  approved mockups. See section 12 and `docs/SETLIST.md`.
 - Emulator: boots and runs every page in the manual (`docs/TEST_REPORT.md`), pixel-exact LCD,
   clickable panel, MIDI A/B to the PC, working floppy drive (Kyran's downloaded style set loads
-  via Style Manager and plays; notes come out of MIDI OUT). Details: `docs/EMULATOR.md`.
+  via Style Manager and plays; notes come out of MIDI OUT; writing to disk works since the
+  setlist work). Details: `docs/EMULATOR.md`.
 
 Next real-world step: FIRST HARDWARE TEST, prepared, not yet done (keyboard is at church).
 - Procedure: `docs/FIRST_HARDWARE_TEST.md`; safety reasoning: `docs/RECOVERY.md`.
@@ -46,6 +49,9 @@ Next real-world step: FIRST HARDWARE TEST, prepared, not yet done (keyboard is a
   Only MAIN PROGRAM is installed; SUB PROGRAM (`p9000s.bin`) is never touched.
 - Order: splash-only test -> reinstall originals (proves recovery) -> full mod.
 - Test files were sent to him as `PSR9000-mod-test.zip` (built by `make_image.py`, see section 6).
+  Rebuilt 2026-11-04: TEST 2 (full mod) now includes the setlist. TEST 1 (splash only) kept
+  the earlier, already boot-tested files; a rebuilt splash-only image differs only in where
+  the splash bytes sit.
 - When he reports back: check what he saw (photos), especially sound changes for VOL/BRT/REV/
   PAN, EQ values vs the stock M.EQ page, flicker, anything from the old screen showing.
 
@@ -70,7 +76,8 @@ After the hardware test, update this table with what actually happened.
 |---|---|
 | `CLAUDE.md` | Goals, firmware address map, verified findings, ground rules. Keep it current. |
 | `README.md` | GitHub overview. RULE: update "What works so far" in the same commit as features. |
-| `mod/home/hp.c` | The whole mod in C (home screen, EQ page, hooks). |
+| `mod/home/hp.c` | The mod in C: home screen, EQ page, hooks. Includes `setlist.c`. |
+| `mod/home/setlist.c` | Setlist / Performance mode (screens, floppy file, MIDI, registration). |
 | `mod/home/tramp.S` | Trampoline to call the original dial handler. |
 | `mod/home/build.py` | Compiles, checks SH-2-only instructions, links at 0x3EE400, writes `build/patches.json` + `build/apply.lua` (only apply.lua is committed). |
 | `mod/home/make_image.py` | Writes patched `firmware/mod/p9000m.002-.004` with both checksums fixed; `--splash-only` for the minimal test image. |
@@ -78,10 +85,12 @@ After the hardware test, update this table with what actually happened.
 | `mame/ympsr9000.cpp` | Our MAME driver. `make_layout.py` -> `psr9000.lay` (panel layout). |
 | `mame/patches/*.diff` | Required MAME core patches (SH7042/43 DMAC+MTU, INTC, upd765 HD63266F). |
 | `mame/crawl.lua` | Scripted panel session (press/dial/wait/snap) used for all testing. |
+| `mame/run_steps.sh` | Runs a crawl script headless (with mod / floppy), retries start-up hangs. |
 | `mame/tests/` | Manual test lists A-D + runner. |
 | `mame/windows/` | Windows start .bat files and README for Kyran's emulator package. |
 | `tools/` | `romcheck.py` (Rom Chk1), `res_extract.py` (UI images), `sh2dis.py` (capstone helpers), `make_floppy.py` (FAT12 image with long names). |
-| `docs/` | EMULATOR, HOME_MOD, RECOVERY, TEST_REPORT, FIRST_HARDWARE_TEST, `images/` (README screenshots). |
+| `tools/fl_studio/` | FL Studio MIDI script for the setlist (drone pattern by key, channel 16). |
+| `docs/` | EMULATOR, HOME_MOD, SETLIST, RECOVERY, TEST_REPORT, FIRST_HARDWARE_TEST, `images/` (README screenshots). |
 | `firmware/`, `docs/private/` | Yamaha files: git-ignored, NEVER commit (see sections 8 and 9). |
 
 ## 6. Environment (rebuild from scratch; a new container has none of this)
@@ -133,10 +142,15 @@ Typical commands:
   16 graphics-library LCD refresh pointers -> hp_refresh (drops stock refreshes while our screen
   is up); fader update callbacks 0x3B1488 -> no-op; home side buttons 0x332C14/24/34/44 ->
   hp_side; mixer default handler 0x3B152C -> hp_default (EXIT closes EQ); splash pointer 0x26010.
+  Setlist: home button table 0x332C54 slots B-E, I, J -> `hp_side_entry` + enable bytes at
+  0x332CC8; mixer panel's claim on E/J at 0x3B163C cleared.
 - "Our screen is up" = active button table RAM 0x10BA718 == 0x3B152C (stock home page 1).
   The stock home keeps running underneath; we redraw the whole framebuffer 0x10C8AEC.
-- No RAM of our own: state lives in unused DMA channel 3 registers (SAR3 checksum, DAR3 flags
-  incl. settle counter / EQ band+mode, DMATCR3 saved reverb levels).
+- Home/EQ state lives in unused DMA channel 3 registers (SAR3 checksum, DAR3 flags incl.
+  settle counter / EQ band+mode, DMATCR3 saved reverb levels).
+- The setlist needs about 1 KB, so it takes 5 blocks from the kernel's block pool 1, once, and
+  keeps them. Block 0 is found again by its magic (docs/SETLIST.md). There is still no free
+  static RAM: the untouched DRAM gaps are task stacks.
 - SH-2 constraints: compiled with sh4 gcc in no-FPU mode; no shad/shld, no division, no
   libgcc, no .data/.bss (build.py rejects them). Use the shr/shl/mul/udiv helpers in hp.c.
 - Text uses Yamaha's fonts read from the ROM at run time (table 0x357B08); icons from the
@@ -186,6 +200,17 @@ Typical commands:
 - Floppy: the "Unformatted disk" bug was the HD63266F register at +2 (bit set/reset register
   the firmware self-tests), plus ready line, data rate, DMA DREQ. All fixed; see EMULATOR.md.
 - The old style-name pointer (0x108F098) only held the boot preset; use 0x8F400 + name tables.
+- hp_tick (UI flush) runs only about once per second; time-outs counted in ticks are seconds.
+- Kernel pool 1 blocks are 0x10C apart (4-byte tag + 0x108), not 0x108.
+- Home side buttons: the table is 29 slots from 0x332C54 (PAGE NEXT, BACK, EXIT, A-J, LCD 1-8
+  UP/DOWN) plus enable bytes at 0x332CC8. The mixer panel underneath claims E/J (0x3B163C);
+  pressing E under our screen froze all panel input until that claim was cleared.
+- The file system's open mode 4 appends to an existing file: delete first.
+- The emulator wrote zeros to the floppy and stalled MIDI with both ports busy (both fixed in
+  the driver). `-debug` together with a floppy never got past start-up, and plain runs
+  sometimes hang at start-up too: retry (`mame/run_steps.sh` does that automatically after
+  40 s without a sign of life). The trace-everything idea with breakpoints had to be dropped
+  for file-system work; reading the code worked.
 
 ## 11. Open items / ideas (prioritise with Kyran)
 
@@ -194,7 +219,8 @@ Typical commands:
    sound (emulator reads brightness back from the faked sound board, so it shows 0-1 there).
 3. Unresolved emulator report: once the LCD froze after a voice page + LCD B (could not
    reproduce; START_PSR9000_DEBUG.bat writes error.log if it happens again).
-4. Free for new functions: side buttons A-E and G-J on the home screen (all LCD 1-8 are used).
+4. Free for new functions: side buttons A-E and H-J on the home screen (G = setlist, F = EQ;
+   all LCD 1-8 are used).
    A sub-menu for the other volumes (SONG/ACMP/M.PAD/LEFT/MIC) was an original goal, not done.
 5. Emulator sound / sound dump (discussed, not started): emulate the sub CPU (`p9000s.bin`) +
    SWP30s with fake ROM contents, then a sub-firmware dumper (reuse the WaveRomChk routine) to
@@ -202,3 +228,66 @@ Typical commands:
    Needs a SUB PROGRAM change on hardware later, with the same caution.
 6. Deferred by Kyran: GitHub release of the emulator, a no-Python MAKE_STYLE_DISKS.bat,
    720 KB disk support, custom multi-sample voices (long-term goal).
+7. Setlist follow-ups (section 12): hardware test, PC keyboard on the naming screen, a
+   "choose disk / reload" action, faster status lights.
+
+## 12. Setlist / Performance mode (2026-11-04)
+
+Kyran's spec: "KyranOS - Setlist Management & Performance Mode". His decisions:
+- setlist stored on the floppy;
+- registration stored as bank + memory, BPM display only;
+- MIDI channel 15 = FL configuration ID, channel 16 = drone root note;
+- root keys only, shown with flats (the FL script uses sharps);
+- extra section types with automatic numbering;
+- Yamaha-style naming screen;
+- max 20 songs / 15-character titles / 16 sections;
+- I / J scroll long lists;
+- mockups first. He approved `mockups/setlist_v1.py` + `home_v12.py`, after the edit-screen
+  title pill fix.
+
+Implementation (all details and addresses: `docs/SETLIST.md`):
+- `mod/home/setlist.c`, included by `hp.c`, reuses its drawing and font helpers.
+- Screens LIST / EDIT / NAME / PERF plus dialogs, all drawn over the stock home screen like the
+  EQ page. The mode is kept in the setlist state, so leaving home and coming back returns to
+  the same setlist screen.
+- RAM: 5 kernel pool-1 blocks (0x22BA4).
+- File `KYRANOS.SET` on the floppy through the low-level file system:
+  - open 0x30243E, read 0x302510, write 0x3025A6, close 0x302482;
+  - delete 0x302618, flush 0x22CD06, path prefix 0x22B28A.
+- MIDI via the firmware's 0x2562FC on ports A and B. MIDI SENT = the send ring's read index
+  passed our message.
+- Registration via messages (11,1,bank) + (11,5,memory). REGIST LOADED uses the existence
+  check 0x2BB778 plus the marker at 0x11AF25E.
+- The naming screen is our own copy of Yamaha's layout, because Yamaha's page is driven by
+  resource-pack texts and its own event tables.
+
+Files changed:
+- New: `mod/home/setlist.c`, `docs/SETLIST.md`, `docs/images/setlist.png`,
+  `docs/images/performance.png`, `tools/fl_studio/` (script + README).
+- Changed:
+  - `mod/home/hp.c`: SET tab, routing of buttons / dial / EXIT / tick, `hp_side_entry`;
+  - `mod/home/build.py`: side-button patches, `-fno-tree-loop-distribute-patterns`;
+  - `mame/ympsr9000.cpp`: floppy DMA writes, UART IRQ edges;
+  - `mame/windows/README.txt`;
+  - README, CLAUDE.md, docs/HOME_MOD.md, docs/EMULATOR.md, docs/FIRST_HARDWARE_TEST.md.
+
+Tests: emulator only; table in `docs/SETLIST.md` "Tested in the emulator".
+- Every navigation rule from the spec.
+- MIDI bytes checked in the send rings.
+- REGIST LOADED with a stored registration, FAILED with an empty one.
+- Floppy file checked with a FAT reader, and reloaded after a restart.
+- A PC-made file loads.
+- Home and EQ page unchanged.
+- The patched firmware files from `make_image.py` boot and run the setlist.
+
+Known issues / limits:
+- Not run on the real keyboard yet.
+- Status lights refresh once per second.
+- Swapping the floppy means the next save goes to the new disk.
+- A damaged file is not overwritten until the next save.
+- No PC keyboard input on our naming screen. The PSR-9000 does take one on Yamaha's naming
+  screens, so the hardware has a keyboard port; see Yamaha's hint text.
+
+Next steps: Kyran's hardware test (TEST 2 now includes the setlist: create, save, open, reload
+after power-off, FL Studio drone change), then his feedback on the screens.
+
