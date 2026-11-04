@@ -219,8 +219,9 @@ Typical commands:
 1. Hardware test results (above). Fix whatever he finds.
 2. Unverified on hardware: EQ value ranges (standard XG ranges assumed), whether BRT changes
    sound (emulator reads brightness back from the faked sound board, so it shows 0-1 there).
-3. Unresolved emulator report: once the LCD froze after a voice page + LCD B (could not
-   reproduce; START_PSR9000_DEBUG.bat writes error.log if it happens again).
+3. Emulator freeze Kyran reported earlier: most likely START/STOP (Space) on a preset style,
+   found and fixed 2026-11 (fake preset ROM slots, docs/EMULATOR.md). If it ever freezes
+   another way, START_PSR9000_DEBUG.bat writes error.log.
 4. Free for new functions: side buttons A-E and H-J on the home screen (G = setlist, F = EQ;
    all LCD 1-8 are used).
    A sub-menu for the other volumes (SONG/ACMP/M.PAD/LEFT/MIC) was an original goal, not done.

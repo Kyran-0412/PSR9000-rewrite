@@ -28,6 +28,9 @@ Using it
       PAGE BACK/NEXT = [ ]   MIXING CONSOLE = Z   FUNCTION = X   START/STOP = Space
       Numpad 0-3 = PART SELECT L/R1/R2/R3    Numpad 4-7 = PART ON/OFF L/R1/R2/R3
       Numpad - + = UPPER OCTAVE
+- START/STOP (Space) on a preset style starts an empty style: the preset style chip is not
+  available, so only styles loaded from disk into FLASH make notes (over MIDI). Older
+  versions of this emulator froze when START/STOP was pressed on a preset style; fixed.
 - MAME keys to know: Esc = quit, Tab = MAME menu (change keys, Video Options > view),
   P = pause, F12 = screenshot (saved in "snap").
 - Views (Tab > Video Options): Centre Panel (default), Full Panel, Screen Only.

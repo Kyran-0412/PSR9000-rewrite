@@ -165,9 +165,11 @@ void psr9000_state::init_psr9000()
 		patch16(0x31e098, 0xe000); // mov #0,r0
 	}
 
-	// The preset style mask ROM is not dumped.  Until it is, fill it with 125 empty
-	// "No Data" styles, using the same 512-byte header layout the firmware itself writes
-	// for empty flash styles, so style loading does not run off into garbage.
+	// The preset style mask ROM is not dumped.  Until it is, fill it with empty "No Data"
+	// styles, using the same 512-byte header layout the firmware itself writes for empty
+	// flash styles, so style loading does not run off into garbage.  Every slot of the 2 MB
+	// is filled: the default preset at power-on reads slot 125 (0x60FA10), and an unfilled
+	// (FF) header gave the style clock a beat length of 0, so START/STOP hung the firmware.
 	bool blank = true;
 	for(int i = 0; i < 0x100000 && blank; i++)
 		blank = m_styrom[i] == 0xffff;
@@ -180,8 +182,9 @@ void psr9000_state::init_psr9000()
 			0x00,0x00,0x00,0x00,0x1f,0x00,0x00,0x00,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 			0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 };
 		std::vector<u8> img(0x200000, 0xff);
-		std::fill(img.begin(), img.begin() + 0x10 + 125*0x200, 0x00);
-		for(int n = 0; n < 125; n++) {
+		const int slots = (0x200000 - 0x10) / 0x200;
+		std::fill(img.begin(), img.begin() + 0x10 + slots*0x200, 0x00);
+		for(int n = 0; n < slots; n++) {
 			u8 *h = &img[0x10 + n*0x200];
 			std::copy(std::begin(hdr), std::end(hdr), h);
 			std::copy(std::begin(tail), std::end(tail), h + 0x30);

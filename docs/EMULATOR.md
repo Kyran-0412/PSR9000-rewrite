@@ -239,6 +239,15 @@ What it took (driver + core patches):
   entry replaced cleanly.
 Not done: 720 KB (DD) disks (would need the 250 kbit/s rate).
 
+## START/STOP froze the panel on preset styles (fixed 2026-11)
+- Found by Kyran: pressing Space (= START/STOP) froze the emulator for good.
+- The fake preset style ROM (the real IC29 is not dumped) only held 125 "No Data" headers at
+  0x600010 + n * 0x200, but the style at power-on ("Heart Beat") reads slot 125 (0x60FA10).
+  Its unfilled FF header gave the style clock a beat length of 0 (0x180 >> header byte 5, at
+  0x137022). The beat loop at 0x132440 then subtracted 0 forever and starved the UI task.
+- The driver now fills every slot of the 2 MB with "No Data" headers (time signature 4/4).
+  START/STOP on a preset now runs an empty style (tempo 120), and the panel keeps working.
+
 ## Start-up hang (fixed 2026-11)
 - Now and then MAME hung before the first emulated second; with `-debug` and a floppy it never
   started at all.
