@@ -1,5 +1,7 @@
 # PSR-9000 Firmware Mod Project
 
+New session? Read AI_HANDOFF.md first (status, environment setup, how Kyran works).
+
 Reverse-engineering the Yamaha PSR-9000 arranger keyboard (firmware V3.06) to add custom
 multi-sample instruments, firmware features, a redesigned UI, and eventually a MAME driver
 for testing without the hardware.
