@@ -239,11 +239,13 @@ What it took (driver + core patches):
   entry replaced cleanly.
 Not done: 720 KB (DD) disks (would need the 250 kbit/s rate).
 
-## Known emulator problem: occasional hang at start-up
-- Now and then MAME hangs before the first emulated second: no Lua periodic callback runs and
-  the process spins.
-- It happens with or without a floppy, and more often with `-debug` together with a floppy
-  (that combination never got past start-up in testing).
-- Cause not found. Starting again works. The scripted test runner used for the setlist tests
-  restarts a run that shows no sign of life within 40 s.
+## Start-up hang (fixed 2026-11)
+- Now and then MAME hung before the first emulated second; with `-debug` and a floppy it never
+  started at all.
+- gdb showed it stuck in `sed1330_device::draw_graphics_scanline`: the LCD controller model
+  drew screens before the firmware had sent SYSTEM SET, using uninitialised registers. The
+  loop of m_cr x m_fx could run for minutes.
+- Core patch `mame/patches/sed1330_init.diff` clears the registers at device start.
+- After the fix: 14 of 14 test starts were fine, including `-debug` with a floppy.
+  `mame/run_steps.sh` still retries, just in case.
 

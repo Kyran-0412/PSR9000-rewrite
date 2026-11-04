@@ -83,7 +83,7 @@ After the hardware test, update this table with what actually happened.
 | `mod/home/make_image.py` | Writes patched `firmware/mod/p9000m.002-.004` with both checksums fixed; `--splash-only` for the minimal test image. |
 | `mockups/` | Design mockups (Python). Some read icons/fonts from the firmware files at run time. |
 | `mame/ympsr9000.cpp` | Our MAME driver. `make_layout.py` -> `psr9000.lay` (panel layout). |
-| `mame/patches/*.diff` | Required MAME core patches (SH7042/43 DMAC+MTU, INTC, upd765 HD63266F). |
+| `mame/patches/*.diff` | Required MAME core patches (SH7042/43 DMAC+MTU, INTC, upd765 HD63266F, SED1330 start-up registers). |
 | `mame/crawl.lua` | Scripted panel session (press/dial/wait/snap) used for all testing. |
 | `mame/run_steps.sh` | Runs a crawl script headless (with mod / floppy), retries start-up hangs. |
 | `mame/tests/` | Manual test lists A-D + runner. |
@@ -207,10 +207,12 @@ Typical commands:
   pressing E under our screen froze all panel input until that claim was cleared.
 - The file system's open mode 4 appends to an existing file: delete first.
 - The emulator wrote zeros to the floppy and stalled MIDI with both ports busy (both fixed in
-  the driver). `-debug` together with a floppy never got past start-up, and plain runs
-  sometimes hang at start-up too: retry (`mame/run_steps.sh` does that automatically after
-  40 s without a sign of life). The trace-everything idea with breakpoints had to be dropped
-  for file-system work; reading the code worked.
+  the driver).
+- Start-up hangs (random; always with `-debug` + floppy) were MAME's SED1330 drawing with
+  uninitialised registers. Fixed by core patch `sed1330_init.diff`; found with
+  `gdb -p <pid> -batch -ex "thread apply all bt"` on the stuck process, which is worth trying
+  first next time. A hung MAME ignores SIGTERM: use `timeout -s KILL`.
+- `mame/run_steps.sh` retries a run that shows no sign of life within 40 s.
 
 ## 11. Open items / ideas (prioritise with Kyran)
 

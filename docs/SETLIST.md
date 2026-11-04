@@ -224,7 +224,7 @@ the mockups.
 Emulator fixes found on the way (see docs/EMULATOR.md):
 - floppy writes came out as zeros;
 - MIDI output stopped when MIDI A and B were busy at the same time;
-- MAME sometimes hangs at start-up (the test runner retries).
+- MAME sometimes hung at start-up (SED1330 registers not initialised).
 
 ## Known limits / open points
 
