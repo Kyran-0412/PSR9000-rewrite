@@ -168,9 +168,9 @@ def song_edit(song, field, sec, new=False):
     fields = [('TITLE', song['t']), ('KEY', song['k']), ('BPM', str(song['bpm'])),
               ('FL CONFIG', str(song['cfg'])), ('REGIST', 'BANK %02d - %d' % song['reg'])]
     for i, (lab, val) in enumerate(fields):     # aligned with side buttons A-E
-        y = 27 + 39 * i
+        y = 29 + 39 * i                         # 2 px below the button centre: clears the header
         on = i == field
-        box = (14, y - 9, 152, y + 9)          # one line: label left, value right
+        box = (14, y - 8, 152, y + 8)          # one line: label left, value right
         if on: s.rr(box, 7, fill=K); fg = Wt
         else: s.rr(box, 7, fill=Wt, outline=K, width=2); fg = K
         s.t(21, y, lab, LABEL, fg)
