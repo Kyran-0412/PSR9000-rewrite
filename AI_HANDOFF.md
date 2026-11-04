@@ -45,11 +45,26 @@ Next real-world step: FIRST HARDWARE TEST, prepared, not yet done (keyboard is a
   Splash 2 + Splash 4, Full Mod 2 + Full Mod 4. Disks 1 and 3 are identical for all builds.
   Only MAIN PROGRAM is installed; SUB PROGRAM (`p9000s.bin`) is never touched.
 - Order: splash-only test -> reinstall originals (proves recovery) -> full mod.
-- Test files were sent to him as `PSR9000-mod-test.zip` (built by `make_image.py`, see 5).
+- Test files were sent to him as `PSR9000-mod-test.zip` (built by `make_image.py`, see section 6).
 - When he reports back: check what he saw (photos), especially sound changes for VOL/BRT/REV/
   PAN, EQ values vs the stock M.EQ page, flicker, anything from the old screen showing.
 
-## 4. Repository map
+## 4. Recovery: what has been tested vs what is only expected
+
+Keep these apart when talking to Kyran: never present an expected recovery path as proven.
+
+| Recovery path | Status |
+|---|---|
+| PROGRAM INSTALLER (hold START/STOP at power-on) installing **Yamaha's own** update disks | **Tested**: Kyran updated his keyboard to main 3.06 / sub 3.01 this way before this project. |
+| Installer still starting and reinstalling the originals **after a modified main program** was installed | **Not tested yet.** Expected, because the installer lives in the protected boot area (main 0x00000-0x1FFFF, never in any update file, our files leave it blank too) and Yamaha's manual says a failed install is fixed by reinstalling. Step 5 of TEST 1 in docs/FIRST_HARDWARE_TEST.md is the first real test. |
+| Installer working if our code crashes at boot | **Not tested.** Expected, because the CPU starts in the boot area and checks START/STOP before jumping to the main program at 0x20000 (inferred, the boot code is not available to read). |
+| Flash Protect (boot blocks locked) | **Unknown.** Test mode 001 shows the state; not checked on Kyran's keyboard yet. |
+| External flash programmer on IC6/IC7 (2x 28F160S5) if the boot area were ever damaged | **Theoretical**, last resort, needs a repair shop or desoldering/clip; never tried. |
+| Sound-board (SUB PROGRAM) recovery after a modified `p9000s.bin` | **Not applicable / not tested**: we have never changed the sub program. |
+
+After the hardware test, update this table with what actually happened.
+
+## 5. Repository map
 
 | Path | What |
 |---|---|
@@ -67,9 +82,9 @@ Next real-world step: FIRST HARDWARE TEST, prepared, not yet done (keyboard is a
 | `mame/windows/` | Windows start .bat files and README for Kyran's emulator package. |
 | `tools/` | `romcheck.py` (Rom Chk1), `res_extract.py` (UI images), `sh2dis.py` (capstone helpers), `make_floppy.py` (FAT12 image with long names). |
 | `docs/` | EMULATOR, HOME_MOD, RECOVERY, TEST_REPORT, FIRST_HARDWARE_TEST, `images/` (README screenshots). |
-| `firmware/`, `docs/private/` | Yamaha files: git-ignored, NEVER commit (see 7). |
+| `firmware/`, `docs/private/` | Yamaha files: git-ignored, NEVER commit (see sections 8 and 9). |
 
-## 5. Environment (rebuild from scratch; a new container has none of this)
+## 6. Environment (rebuild from scratch; a new container has none of this)
 
 Things that are NOT in the repo and must be recreated:
 
@@ -110,7 +125,7 @@ Typical commands:
   and README from `mame/windows/`, `mod/apply.lua`, `styles/*.img`, empty `roms/psr9000/` with
   a note. Zip it and send it; never put Yamaha firmware files in it.
 
-## 6. How the mod works (short; details in docs/HOME_MOD.md)
+## 7. How the mod works (short; details in docs/HOME_MOD.md)
 
 - Code + data linked at 0x3EE400 (free 0xFF area up to 0x3FFFE5); limit 0x3FFF00.
 - Hooks (all listed in `build.py`): dial handler 0x6D45C -> hp_dial; UI flush tail 0x24546 ->
@@ -130,7 +145,7 @@ Typical commands:
   (21 Q, 22 FREQ, 23 GAIN, 19 = reset knob); current style number 0x8F400().
 - Colours: a SET framebuffer bit is LIGHT (yellow) on the real LCD, clear = blue.
 
-## 7. Ground rules (hard)
+## 8. Ground rules (hard)
 
 - Never commit Yamaha material: firmware files, manuals, style files, disk images, dumps,
   patched firmware images. The patch list `apply.lua` (our bytes only) is fine.
@@ -141,7 +156,22 @@ Typical commands:
   no model names in commits or files.
 - Keep `README.md`, `CLAUDE.md` and the relevant `docs/` file updated with each change.
 
-## 8. Lessons / pitfalls (cost us time)
+## 9. File access and privacy
+
+- Yamaha's firmware, manuals, style files and anything derived from them (patched images, disk
+  images, dumps) stay private: in `firmware/` / `docs/private/` (git-ignored) and in zips sent
+  directly to Kyran. Never commit or publish them.
+- If a needed file is missing (firmware files, manuals, style files, Kyran's disks), **ask Kyran
+  for it**. Do not try to recreate it, guess its contents, or download it from unofficial
+  sources (ROM sites, forums, mirrors). The only download source used so far is Yamaha's own
+  support site for `PSR9000_OS306.zip`, and Kyran supplied that file himself; the style set
+  also came from him.
+- ROM chips that are not in any update file (preset style IC29, voice IC33, wave ROMs) are not
+  available at all. The only legitimate way to get them is dumping Kyran's own keyboard (see
+  open items), and those dumps are private too.
+- Kyran's personal details (e.g. his email) are only for git authorship, never for other uses.
+
+## 10. Lessons / pitfalls (cost us time)
 
 - MAME skips its red warning screen only with `-seconds_to_run` <= 300; long tests run in chunks.
 - Lua `manager.machine.time.seconds` is whole seconds; use `time:as_double()`.
@@ -157,7 +187,7 @@ Typical commands:
   the firmware self-tests), plus ready line, data rate, DMA DREQ. All fixed; see EMULATOR.md.
 - The old style-name pointer (0x108F098) only held the boot preset; use 0x8F400 + name tables.
 
-## 9. Open items / ideas (prioritise with Kyran)
+## 11. Open items / ideas (prioritise with Kyran)
 
 1. Hardware test results (above). Fix whatever he finds.
 2. Unverified on hardware: EQ value ranges (standard XG ranges assumed), whether BRT changes
